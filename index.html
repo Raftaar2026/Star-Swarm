@@ -353,9 +353,13 @@ var Input = {
     this.bindPad(els.fire, 'fire');
     // Block page scrolling / zooming / callouts from touches anywhere in the app
     var stopper = function (e) { e.preventDefault(); };
-    ['touchstart', 'touchmove', 'touchend'].forEach(function (t) {
+    ['touchstart', 'touchmove'].forEach(function (t) {
       els.app.addEventListener(t, stopper, { passive: false });
     });
+    // Chrome on Android grants audio "user activation" on touchend / pointerup, NOT on a touch pointerdown,
+    // so the AudioContext must also be unlocked when the finger lifts.
+    els.app.addEventListener('touchend', function (e) { e.preventDefault(); Audio_.unlock(); }, { passive: false });
+    window.addEventListener('pointerup', function () { Audio_.unlock(); });
     ['gesturestart', 'gesturechange', 'gestureend', 'contextmenu'].forEach(function (t) {
       document.addEventListener(t, stopper);
     });
@@ -378,6 +382,7 @@ var Display = {
   app: null, stage: null, canvas: null, ctx: null, dpr: 1, cssW: 0, cssH: 0,
   onDprChange: null,
   fit: function () {
+    if (!this.app || !this.stage || !this.canvas) return;   // not initialised yet
     var h = window.innerHeight || document.documentElement.clientHeight;
     if (h) this.app.style.height = h + 'px';
     var sw = this.stage.clientWidth, sh = this.stage.clientHeight;
@@ -1141,17 +1146,18 @@ function boot() {
   G.hi = Storage.getInt('hi');
   Audio_.muted = Storage.get('muted') === '1';
 
-  var coarse = false;
-  try { coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches); } catch (e) { /* ignore */ }
-  Input.onTouchMode = function () { app.classList.add('touch'); Display.fit(); };
-  Input.isTouch = false;
-  if (coarse) Input.markTouch();
-
   Input.onStart = handleStart; Input.onPause = togglePause; Input.onMute = toggleMute;
   initPools();
   Display.onDprChange = function (dpr) { Sprites.build(dpr); };
   Display.init({ app: app, stage: stage, canvas: canvas, ctx: ctx });
   if (!Sprites.ready) Sprites.build(Display.dpr);
+
+  // Touch detection must run AFTER Display.init: switching to touch mode re-fits the canvas.
+  var coarse = false;
+  try { coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches); } catch (e) { /* ignore */ }
+  Input.onTouchMode = function () { app.classList.add('touch'); Display.fit(); };
+  Input.isTouch = false;
+  if (coarse) Input.markTouch();
   Input.init({
     app: app, stage: stage, btnPause: btnPause, btnMute: btnMute,
     left: document.getElementById('padLeft'), right: document.getElementById('padRight'), fire: document.getElementById('padFire')
