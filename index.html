@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Star Swarm</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; height: 100%; background: #000; color: #fff;
+    overflow: hidden; overscroll-behavior: none;
+  }
+  body {
+    position: fixed; inset: 0; width: 100%;
+    font-family: ui-monospace, Menlo, Consolas, "Courier New", monospace;
+    -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+  }
+  #app {
+    position: absolute; left: 0; top: 0; width: 100%;
+    height: 100vh; height: 100dvh;
+    display: flex; flex-direction: column; box-sizing: border-box;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    touch-action: none; -webkit-touch-callout: none;
+  }
+  #topbar {
+    flex: 0 0 auto; height: 44px; display: flex; align-items: center;
+    justify-content: space-between; padding: 0 8px; box-sizing: border-box;
+  }
+  #topbar .name { font-weight: bold; letter-spacing: 2px; color: #ffd23b; font-size: 14px; }
+  #topbar .tools { display: flex; gap: 8px; }
+  .btn {
+    min-width: 44px; height: 44px; box-sizing: border-box; padding: 0 8px;
+    background: rgba(255,255,255,0.14); color: #fff; font: bold 16px ui-monospace, Menlo, Consolas, monospace;
+    border: 2px solid rgba(255,255,255,0.6); border-radius: 10px; cursor: pointer;
+    touch-action: none; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none;
+  }
+  .btn.down, .btn:active { background: rgba(255,255,255,0.45); }
+  .btn.off { text-decoration: line-through; opacity: 0.6; }
+  #stage {
+    flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center;
+    touch-action: none;
+  }
+  canvas { display: block; background: #000; touch-action: none; outline: none; }
+  #controls {
+    display: none; flex: 0 0 auto; height: 104px; box-sizing: border-box; padding: 0 14px;
+    align-items: center; justify-content: space-between; touch-action: none;
+  }
+  .touch #controls { display: flex; }
+  #controls .grp { display: flex; gap: 12px; }
+  .pad {
+    width: 68px; height: 68px; min-width: 44px; min-height: 44px; font-size: 28px; padding: 0;
+    background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.65);
+  }
+  .pad.fire {
+    width: 96px; height: 96px; border-radius: 50%; font-size: 18px;
+    background: rgba(255,59,107,0.35); border-color: rgba(255,120,150,0.9);
+  }
+  .pad.down { background: rgba(255,255,255,0.5); }
+  .pad.fire.down { background: rgba(255,59,107,0.75); }
+  #fallback { display: none; padding: 24px; text-align: center; font-size: 16px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <span class="name" id="gameName">STAR SWARM</span>
+    <div class="tools">
+      <button class="btn" id="btnMute" type="button" tabindex="-1" aria-label="Toggle sound" aria-pressed="false">&#9834;</button>
+      <button class="btn" id="btnPause" type="button" tabindex="-1" aria-label="Pause or resume">II</button>
+    </div>
+  </div>
+  <div id="stage">
+    <canvas id="game" tabindex="0" role="img" aria-label="Star Swarm: an arcade shooter. Move your ship left and right along the bottom and shoot the alien swarm."></canvas>
+    <div id="fallback">Sorry, your browser does not support HTML5 canvas, which this game needs. Please try a current version of Chrome, Safari, Firefox or Edge.</div>
+  </div>
+  <div id="controls">
+    <div class="grp">
+      <button class="btn pad" id="padLeft" type="button" tabindex="-1" aria-label="Move left">&#9664;</button>
+      <button class="btn pad" id="padRight" type="button" tabindex="-1" aria-label="Move right">&#9654;</button>
+    </div>
+    <button class="btn pad fire" id="padFire" type="button" tabindex="-1" aria-label="Fire">FIRE</button>
+  </div>
+</div>
+
+<script>
+/*
+ * STAR SWARM - a small formation-and-dive arcade shooter. Original art, sound and name.
+ *
+ * HOW TO RUN
+ *   Open this file in a browser (works from file://), or serve the folder with any static server,
+ *   e.g.  python3 -m http.server   or   npx serve .
+ *
+ * CONTROLS
+ *   Desktop: Left/Right or A/D move, Space fires (hold to auto-fire), P or Esc pause,
+ *            M mute, Enter starts / restarts / resumes.
+ *   Mobile : on-screen left / right buttons and FIRE button; tap the playfield to start or resume.
+ *
+ * TUNING
+ *   Every tunable value (speeds, scores, wave scaling, timings, colors, the game name) lives in the
+ *   CONFIG object just below. Edit it and reload.
+ */
+(function () {
+'use strict';
+
+/* =====================================================================
+ * CONFIG - all tunables
+ * ===================================================================== */
+var CONFIG = {
+  TITLE: 'STAR SWARM',          // working title; change here only
+  STORAGE_PREFIX: 'starswarm.',
+  W: 360, H: 640,               // logical resolution
+  maxDt: 0.05,                  // seconds; cap on frame delta
+  maxDpr: 2,
+  player: {
+    y: 578, speed: 230, w: 22, h: 18, hitW: 14, hitH: 12,
+    lives: 3, extraLifeScore: 7000, invuln: 2.0,
+    bulletSpeed: 520, bulletW: 3, bulletH: 10
+  },
+  formation: {
+    cols: 10, spacingX: 28, spacingY: 26, top: 96,
+    swayAmp: 22, swaySpeed: 0.9,
+    enterDur: 1.7, enterStagger: 0.04
+  },
+  enemy: { w: 22, h: 18, hitW: 16, hitH: 13 },
+  // [inFormation, diving] by type: 0 basic, 1 mid-tier, 2 escort, 3 flagship
+  score: [[30, 60], [40, 80], [50, 100], [60, 150]],
+  // Flagship bonus while diving (replaces its normal diving score)
+  flagshipBonus: { alone: 200, escortsAlive: 300, escortsDead: 800 },
+  difficulty: {
+    capWave: 10,                    // difficulty stops increasing after this wave
+    diveInterval: [2.2, 0.7],       // seconds between dive launches   [wave 1, capWave]
+    maxDivers: [2, 5],              // simultaneous divers
+    diveSpeed: [150, 250],          // px/s along the dive path
+    fireRate: [0.3, 0.8],           // shots per second per diver
+    bulletSpeed: [150, 230],        // enemy bullet speed px/s
+    maxEnemyBullets: [3, 7],        // enemy bullets on screen
+    flagshipDiveChance: 0.35
+  },
+  timing: { waveIntro: 1.5, waveEndDelay: 1.0, deathPause: 1.6, gameOverLock: 1.0, bannerDur: 1.5 },
+  colors: {
+    bg: '#000000', text: '#ffffff', accent: '#ffd23b', hot: '#ff3b6b', cool: '#4de2ff',
+    playerBullet: '#fffb8a', enemyBullet: '#ff6b3b'
+  },
+  // palette: [main, accent, white]
+  palettes: [
+    ['#4da3ff', '#ff3b6b', '#ffffff'],   // basic
+    ['#b45cff', '#ffd23b', '#ffffff'],   // mid-tier
+    ['#ff5a3c', '#ffe14a', '#ffffff'],   // escort
+    ['#ffd23b', '#ff3b6b', '#ffffff'],   // flagship
+    ['#39ff88', '#ff9a3b', '#ffffff']    // player
+  ],
+  particles: 200, popups: 8, enemyBulletPool: 14, stars: 70
+};
+
+var W = CONFIG.W, H = CONFIG.H;
+var FONT = 'ui-monospace, Menlo, Consolas, "Courier New", monospace';
+
+/* =====================================================================
+ * Utils
+ * ===================================================================== */
+function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function rand(a, b) { return a + Math.random() * (b - a); }
+function bez(x0, y0, x1, y1, x2, y2, x3, y3, t, out) {
+  var u = 1 - t, a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
+  out.x = a * x0 + b * x1 + c * x2 + d * x3;
+  out.y = a * y0 + b * y1 + c * y2 + d * y3;
+}
+function aabb(ax, ay, aw, ah, bx, by, bw, bh) { // centered boxes
+  return Math.abs(ax - bx) * 2 < (aw + bw) && Math.abs(ay - by) * 2 < (ah + bh);
+}
+function padScore(n) { var s = String(n); while (s.length < 7) s = '0' + s; return s; }
+
+// Pure game-rule helpers (no state, no rendering)
+function difficulty(wave) {
+  var D = CONFIG.difficulty;
+  var t = (Math.min(Math.max(wave, 1), D.capWave) - 1) / (D.capWave - 1);
+  return {
+    diveInterval: lerp(D.diveInterval[0], D.diveInterval[1], t),
+    maxDivers: Math.round(lerp(D.maxDivers[0], D.maxDivers[1], t)),
+    diveSpeed: lerp(D.diveSpeed[0], D.diveSpeed[1], t),
+    fireRate: lerp(D.fireRate[0], D.fireRate[1], t),
+    bulletSpeed: lerp(D.bulletSpeed[0], D.bulletSpeed[1], t),
+    maxEnemyBullets: Math.round(lerp(D.maxEnemyBullets[0], D.maxEnemyBullets[1], t))
+  };
+}
+// escortsLaunched: how many escorts left with the flagship; escortsAlive: how many of them still live.
+// 0 launched -> alone; any escort still alive -> 300; all launched escorts shot down first -> 800.
+function flagshipBonus(escortsLaunched, escortsAlive) {
+  var B = CONFIG.flagshipBonus;
+  if (escortsLaunched <= 0) return B.alone;
+  return escortsAlive > 0 ? B.escortsAlive : B.escortsDead;
+}
+function pointsFor(type, diving, escortsLaunched, escortsAlive) {
+  if (type === 3 && diving) return flagshipBonus(escortsLaunched, escortsAlive);
+  return CONFIG.score[type][diving ? 1 : 0];
+}
+
+/* =====================================================================
+ * Storage - safe wrappers
+ * ===================================================================== */
+var Storage = {
+  get: function (k) {
+    try { return window.localStorage.getItem(CONFIG.STORAGE_PREFIX + k); } catch (e) { return null; }
+  },
+  set: function (k, v) {
+    try { window.localStorage.setItem(CONFIG.STORAGE_PREFIX + k, String(v)); } catch (e) { /* ignore */ }
+  },
+  getInt: function (k) {
+    var n = parseInt(Storage.get(k), 10);
+    return (isFinite(n) && n > 0) ? n : 0;
+  }
+};
+
+/* =====================================================================
+ * Audio - synthesized, lazy, unlocked on user gesture
+ * ===================================================================== */
+var Audio_ = {
+  ctx: null, master: null, muted: false,
+  unlock: function () {
+    try {
+      if (!this.ctx) {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        this.ctx = new AC();
+        this.master = this.ctx.createGain();
+        this.master.gain.value = 0.22;
+        this.master.connect(this.ctx.destination);
+        // silent buffer helps unlock older iOS
+        var b = this.ctx.createBuffer(1, 1, 22050), s = this.ctx.createBufferSource();
+        s.buffer = b; s.connect(this.ctx.destination); s.start(0);
+      }
+      if (this.ctx.state === 'suspended') {
+        var p = this.ctx.resume();
+        if (p && p.catch) p.catch(function () {});
+      }
+    } catch (e) { /* silent */ }
+  },
+  tone: function (f0, f1, dur, type, vol, delay) {
+    if (this.muted || !this.ctx) return;
+    try {
+      var c = this.ctx, t0 = c.currentTime + (delay || 0);
+      var o = c.createOscillator(), g = c.createGain();
+      o.type = type || 'square';
+      o.frequency.setValueAtTime(f0, t0);
+      o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t0 + dur);
+      g.gain.setValueAtTime(vol, t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(this.master);
+      o.start(t0); o.stop(t0 + dur + 0.02);
+    } catch (e) { /* silent */ }
+  },
+  noise: function (dur, vol, cutoff) {
+    if (this.muted || !this.ctx) return;
+    try {
+      var c = this.ctx, n = Math.floor(c.sampleRate * dur);
+      var buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+      for (var i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+      var s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+      s.buffer = buf; f.type = 'lowpass'; f.frequency.value = cutoff || 1500;
+      g.gain.value = vol;
+      s.connect(f); f.connect(g); g.connect(this.master);
+      s.start();
+    } catch (e) { /* silent */ }
+  },
+  shoot: function () { this.tone(900, 280, 0.09, 'square', 0.35); },
+  enemyHit: function () { this.noise(0.18, 0.7, 2500); this.tone(300, 80, 0.15, 'sawtooth', 0.25); },
+  playerHit: function () { this.noise(0.7, 1.0, 900); this.tone(180, 30, 0.6, 'sawtooth', 0.4); },
+  dive: function () { this.tone(320, 760, 0.28, 'sine', 0.3); },
+  extraLife: function () {
+    var n = [523, 659, 784, 1047];
+    for (var i = 0; i < n.length; i++) this.tone(n[i], n[i], 0.12, 'square', 0.3, i * 0.09);
+  },
+  waveStart: function () {
+    var n = [392, 523, 659];
+    for (var i = 0; i < n.length; i++) this.tone(n[i], n[i] * 1.01, 0.12, 'triangle', 0.4, i * 0.1);
+  },
+  setMuted: function (m) {
+    this.muted = !!m;
+    Storage.set('muted', this.muted ? 1 : 0);
+    try { if (this.master) this.master.gain.value = this.muted ? 0 : 0.22; } catch (e) { /* silent */ }
+  }
+};
+
+/* =====================================================================
+ * Input - unified keyboard + multi-touch interface
+ * ===================================================================== */
+var Input = {
+  left: false, right: false, fire: false, dir: 0,
+  isTouch: false,
+  keys: {}, pads: { left: 0, right: 0, fire: 0 },
+  onStart: null, onPause: null, onMute: null, onTouchMode: null,
+  clearers: [],
+  refresh: function () {
+    var k = this.keys, p = this.pads;
+    this.left = !!(k.ArrowLeft || k.KeyA || p.left > 0);
+    this.right = !!(k.ArrowRight || k.KeyD || p.right > 0);
+    this.fire = !!(k.Space || p.fire > 0);
+    this.dir = (this.right ? 1 : 0) - (this.left ? 1 : 0); // both held -> 0
+  },
+  clear: function () {
+    this.keys = {};
+    for (var i = 0; i < this.clearers.length; i++) this.clearers[i]();
+    this.pads.left = this.pads.right = this.pads.fire = 0;
+    this.refresh();
+  },
+  markTouch: function () {
+    if (!this.isTouch) { this.isTouch = true; if (this.onTouchMode) this.onTouchMode(); }
+  },
+  bindPad: function (el, name) {
+    var ids = {}, self = this;
+    function recalc() {
+      var n = 0; for (var k in ids) if (ids.hasOwnProperty(k)) n++;
+      self.pads[name] = n; el.classList.toggle('down', n > 0); self.refresh();
+    }
+    function down(e) {
+      e.preventDefault(); Audio_.unlock();
+      if (e.pointerType === 'touch') self.markTouch();
+      ids[e.pointerId] = 1;
+      try { el.releasePointerCapture(e.pointerId); } catch (x) { /* ignore */ } // so sliding off releases
+      recalc();
+    }
+    function up(e) { if (ids[e.pointerId]) { delete ids[e.pointerId]; recalc(); } }
+    el.addEventListener('pointerdown', down);
+    el.addEventListener('pointerup', up);
+    el.addEventListener('pointercancel', up);
+    el.addEventListener('pointerleave', up);
+    el.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    this.clearers.push(function () { ids = {}; el.classList.remove('down'); });
+  },
+  init: function (els) {
+    var self = this;
+    var gameKeys = { ArrowLeft: 1, ArrowRight: 1, ArrowUp: 1, ArrowDown: 1, Space: 1, Enter: 1 };
+    window.addEventListener('keydown', function (e) {
+      var c = e.code;
+      if (gameKeys[c]) e.preventDefault();
+      Audio_.unlock();
+      if (e.repeat) return;
+      self.keys[c] = true; self.refresh();
+      if (c === 'Enter') { if (self.onStart) self.onStart(false); }
+      else if (c === 'Space') { if (self.onStart) self.onStart(true); }
+      else if (c === 'KeyP' || c === 'Escape') { if (self.onPause) self.onPause(); }
+      else if (c === 'KeyM') { if (self.onMute) self.onMute(); }
+    });
+    window.addEventListener('keyup', function (e) {
+      if (gameKeys[e.code]) e.preventDefault();
+      self.keys[e.code] = false; self.refresh();
+    });
+    this.bindPad(els.left, 'left');
+    this.bindPad(els.right, 'right');
+    this.bindPad(els.fire, 'fire');
+    // Block page scrolling / zooming / callouts from touches anywhere in the app
+    var stopper = function (e) { e.preventDefault(); };
+    ['touchstart', 'touchmove', 'touchend'].forEach(function (t) {
+      els.app.addEventListener(t, stopper, { passive: false });
+    });
+    ['gesturestart', 'gesturechange', 'gestureend', 'contextmenu'].forEach(function (t) {
+      document.addEventListener(t, stopper);
+    });
+    // Tap the playfield: start / restart / resume
+    els.stage.addEventListener('pointerdown', function (e) {
+      e.preventDefault(); Audio_.unlock();
+      if (e.pointerType === 'touch') self.markTouch();
+      if (self.onStart) self.onStart(false);
+    });
+    // Small toolbar buttons use pointerdown (not click)
+    els.btnPause.addEventListener('pointerdown', function (e) { e.preventDefault(); Audio_.unlock(); if (self.onPause) self.onPause(); });
+    els.btnMute.addEventListener('pointerdown', function (e) { e.preventDefault(); Audio_.unlock(); if (self.onMute) self.onMute(); });
+  }
+};
+
+/* =====================================================================
+ * Display - canvas sizing, DPR, letterboxing
+ * ===================================================================== */
+var Display = {
+  app: null, stage: null, canvas: null, ctx: null, dpr: 1, cssW: 0, cssH: 0,
+  onDprChange: null,
+  fit: function () {
+    var h = window.innerHeight || document.documentElement.clientHeight;
+    if (h) this.app.style.height = h + 'px';
+    var sw = this.stage.clientWidth, sh = this.stage.clientHeight;
+    if (sw <= 0 || sh <= 0) return;
+    var s = Math.min(sw / W, sh / H);
+    var cw = Math.max(1, Math.floor(W * s)), ch = Math.max(1, Math.floor(H * s));
+    var dpr = Math.min(window.devicePixelRatio || 1, CONFIG.maxDpr);
+    this.canvas.style.width = cw + 'px';
+    this.canvas.style.height = ch + 'px';
+    this.canvas.width = Math.round(cw * dpr);
+    this.canvas.height = Math.round(ch * dpr);
+    this.cssW = cw; this.cssH = ch;
+    if (dpr !== this.dpr || !Sprites.ready) { this.dpr = dpr; if (this.onDprChange) this.onDprChange(dpr); }
+  },
+  applyTransform: function (ox, oy) {
+    this.ctx.setTransform(this.canvas.width / W, 0, 0, this.canvas.height / H,
+      (ox || 0) * this.canvas.width / W, (oy || 0) * this.canvas.height / H);
+  },
+  init: function (els) {
+    this.app = els.app; this.stage = els.stage; this.canvas = els.canvas; this.ctx = els.ctx;
+    var self = this;
+    var refit = function () { self.fit(); };
+    window.addEventListener('resize', refit);
+    window.addEventListener('orientationchange', function () { refit(); setTimeout(refit, 150); setTimeout(refit, 400); });
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', refit);
+    this.fit();
+  }
+};
+
+/* =====================================================================
+ * Sprites - pixel maps drawn in code, pre-rendered to offscreen canvases
+ *   '.' empty, '1' main, '2' accent, '3' white
+ * ===================================================================== */
+var SPRITE_MAPS = {
+  basic: [[
+    '..1.....1..',
+    '...1...1...',
+    '..1111111..',
+    '.112131211.',
+    '11111111111',
+    '1.1111111.1',
+    '1.1.....1.1',
+    '...11.11...'
+  ], [
+    '..1.....1..',
+    '...1...1...',
+    '..1111111..',
+    '.112131211.',
+    '11111111111',
+    '.111111111.',
+    '1..1...1..1',
+    '.1.......1.'
+  ]],
+  mid: [[
+    '1....1....1',
+    '.1..111..1.',
+    '..1111111..',
+    '.112313211.',
+    '11111111111',
+    '1.1111111.1',
+    '1...1.1...1',
+    '....1.1....'
+  ], [
+    '1....1....1',
+    '.1..111..1.',
+    '..1111111..',
+    '.112313211.',
+    '11111111111',
+    '.111111111.',
+    '1..1...1..1',
+    '1.........1'
+  ]],
+  escort: [[
+    '....111....',
+    '...11111...',
+    '1..11111..1',
+    '11.12121.11',
+    '11111111111',
+    '1.1.111.1.1',
+    '1...111...1',
+    '....1.1....'
+  ], [
+    '....111....',
+    '...11111...',
+    '.1.11111.1.',
+    '..1121211..',
+    '11111111111',
+    '1.1.111.1.1',
+    '..1.111.1..',
+    '....1.1....'
+  ]],
+  flagship: [[
+    '..1..1..1..',
+    '..1.111.1..',
+    '..1111111..',
+    '.113212311.',
+    '11111111111',
+    '1.1111111.1',
+    '1..11111..1',
+    '...1...1...'
+  ], [
+    '..1..1..1..',
+    '..1.111.1..',
+    '..1111111..',
+    '.113212311.',
+    '11111111111',
+    '.111111111.',
+    '.1.11111.1.',
+    '1.........1'
+  ]],
+  player: [[
+    '.....3.....',
+    '.....1.....',
+    '....111....',
+    '....111....',
+    '1..11311..1',
+    '1.1111111.1',
+    '11111111111',
+    '11.11111.11',
+    '1...2.2...1'
+  ]]
+};
+var SPRITE_TYPE_KEYS = ['basic', 'mid', 'escort', 'flagship', 'player'];
+var Sprites = {
+  ready: false, cache: {},
+  build: function (dpr) {
+    var px = Math.max(2, Math.round(2 * dpr)); // device px per map cell
+    this.cache = {};
+    for (var ti = 0; ti < SPRITE_TYPE_KEYS.length; ti++) {
+      var key = SPRITE_TYPE_KEYS[ti], frames = SPRITE_MAPS[key], pal = CONFIG.palettes[ti], list = [];
+      for (var f = 0; f < frames.length; f++) {
+        var map = frames[f], rows = map.length, cols = map[0].length;
+        var c = document.createElement('canvas');
+        c.width = cols * px; c.height = rows * px;
+        var g = c.getContext('2d');
+        for (var y = 0; y < rows; y++) {
+          for (var x = 0; x < cols; x++) {
+            var ch = map[y].charAt(x);
+            if (ch === '.') continue;
+            g.fillStyle = pal[parseInt(ch, 10) - 1];
+            g.fillRect(x * px, y * px, px, px);
+          }
+        }
+        list.push({ c: c, w: cols * 2, h: rows * 2 });
+      }
+      this.cache[ti] = list;
+    }
+    this.ready = true;
+  },
+  draw: function (ctx, type, frame, x, y, scale) {
+    var list = this.cache[type]; if (!list) return;
+    var s = list[frame % list.length], k = scale || 1;
+    ctx.drawImage(s.c, x - s.w * k / 2, y - s.h * k / 2, s.w * k, s.h * k);
+  }
+};
+
+/* =====================================================================
+ * Entities - player, enemies, bullet / particle pools, starfield
+ * ===================================================================== */
+var reducedMotion = false;
+try { reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { /* ignore */ }
+
+var player = { x: W / 2, alive: true, invuln: 0 };
+var pBullet = { active: false, x: 0, y: 0 };
+var eBullets = [], particles = [], popups = [], stars = [], enemies = [];
+var tmpP = { x: 0, y: 0 };
+
+function initPools() {
+  var i;
+  for (i = 0; i < CONFIG.enemyBulletPool; i++) eBullets.push({ active: false, x: 0, y: 0, vx: 0, vy: 0 });
+  for (i = 0; i < CONFIG.particles; i++) particles.push({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 1, color: '#fff', size: 2 });
+  for (i = 0; i < CONFIG.popups; i++) popups.push({ active: false, x: 0, y: 0, t: 0, text: '' });
+  for (i = 0; i < CONFIG.stars; i++) {
+    var z = i % 3;
+    stars.push({ x: rand(0, W), y: rand(0, H), z: z, speed: [18, 42, 85][z], size: z === 2 ? 2 : 1, a: [0.35, 0.6, 0.95][z] });
+  }
+}
+function spawnBurst(x, y, color, n, speed) {
+  if (reducedMotion) n = Math.ceil(n / 2);
+  for (var i = 0; i < particles.length && n > 0; i++) {
+    var p = particles[i]; if (p.active) continue;
+    var a = Math.random() * 6.2832, v = rand(speed * 0.3, speed);
+    p.active = true; p.x = x; p.y = y; p.vx = Math.cos(a) * v; p.vy = Math.sin(a) * v;
+    p.max = p.life = rand(0.35, 0.8); p.color = color; p.size = Math.random() < 0.3 ? 3 : 2;
+    n--;
+  }
+}
+function spawnPopup(x, y, text) {
+  for (var i = 0; i < popups.length; i++) {
+    var p = popups[i]; if (p.active) continue;
+    p.active = true; p.x = x; p.y = y; p.t = 0; p.text = text; return;
+  }
+}
+function clearEnemyBullets() { for (var i = 0; i < eBullets.length; i++) eBullets[i].active = false; }
+function countEnemyBullets() { var n = 0; for (var i = 0; i < eBullets.length; i++) if (eBullets[i].active) n++; return n; }
+
+// ---- enemy path helpers
+function makePath(segs) {
+  var lens = [], total = 0;
+  for (var i = 0; i < segs.length; i++) {
+    var s = segs[i], len = 0, px = s[0], py = s[1];
+    for (var k = 1; k <= 16; k++) {
+      bez(s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7], k / 16, tmpP);
+      len += Math.sqrt((tmpP.x - px) * (tmpP.x - px) + (tmpP.y - py) * (tmpP.y - py));
+      px = tmpP.x; py = tmpP.y;
+    }
+    lens.push(len); total += len;
+  }
+  return { segs: segs, lens: lens, total: total };
+}
+function pathPos(path, s, out) {
+  var acc = 0, n = path.segs.length;
+  for (var i = 0; i < n; i++) {
+    if (s <= acc + path.lens[i] || i === n - 1) {
+      var q = path.segs[i], t = clamp((s - acc) / path.lens[i], 0, 1);
+      bez(q[0], q[1], q[2], q[3], q[4], q[5], q[6], q[7], t, out);
+      return;
+    }
+    acc += path.lens[i];
+  }
+}
+function buildDivePath(sx, sy, tx, side, endX) {
+  var mx = clamp(lerp(sx, tx, 0.5), 50, 310), my = 330;
+  var c1x = sx + side * 110, c1y = sy - 35;
+  var c2x = mx + side * 90, c2y = my - 110;
+  var d1x = mx - side * 90, d1y = my + 110;           // mirrored tangent keeps the join smooth
+  var d2x = clamp(endX - side * 70, -20, W + 20), d2y = 570;
+  return makePath([
+    [sx, sy, c1x, c1y, c2x, c2y, mx, my],
+    [mx, my, d1x, d1y, d2x, d2y, endX, H + 50]
+  ]);
+}
+function slotX(e) { return e.baseX + G.sway; }
+
+function makeEnemy(type, row, col, order) {
+  var F = CONFIG.formation, side = (order % 2) ? 1 : -1;
+  var baseX = W / 2 + (col - (F.cols - 1) / 2) * F.spacingX, baseY = F.top + row * F.spacingY;
+  return {
+    type: type, row: row, col: col, baseX: baseX, baseY: baseY, x: baseX, y: -40,
+    alive: true, state: 'entering', visible: false,
+    delay: 0.2 + order * F.enterStagger, t: 0, dur: F.enterDur,
+    pa: [side > 0 ? W + 15 : -15, -25, W / 2 + side * 120, 360, baseX - side * 90, baseY + 130],
+    path: null, s: 0, speed: 0, fireCd: 0, params: null,
+    escorts: null, escortsLaunched: 0, phase: Math.random() * 4
+  };
+}
+function buildFormation() {
+  enemies.length = 0;
+  var layout = [
+    { type: 3, row: 0, cols: [3, 6] },
+    { type: 2, row: 1, cols: [2, 3, 4, 5, 6, 7] },
+    { type: 1, row: 2, cols: [1, 2, 3, 4, 5, 6, 7, 8] },
+    { type: 0, row: 3, cols: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] },
+    { type: 0, row: 4, cols: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] },
+    { type: 0, row: 5, cols: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] }
+  ], order = 0;
+  for (var r = 0; r < layout.length; r++) {
+    for (var c = 0; c < layout[r].cols.length; c++) {
+      enemies.push(makeEnemy(layout[r].type, layout[r].row, layout[r].cols[c], order++));
+    }
+  }
+  G.alive = enemies.length;
+}
+function startReturn(e) {   // re-enter from the top and fly back to the slot
+  var sx = slotX(e) + rand(-40, 40);
+  e.state = 'returning'; e.t = 0; e.dur = 1.3; e.path = null; e.visible = true;
+  e.pa = [sx, -25, sx, 40, slotX(e), e.baseY - 70];
+  e.x = sx; e.y = -25;
+}
+function startQuickReturn(e) { // after the player dies: divers fly straight home
+  e.state = 'returning'; e.t = 0; e.dur = 0.9; e.path = null;
+  e.pa = [e.x, e.y, lerp(e.x, slotX(e), 0.2), e.y - 130, slotX(e), e.baseY + 130];
+}
+
+/* =====================================================================
+ * Formation - dive scheduler
+ * ===================================================================== */
+function countDiving() { var n = 0; for (var i = 0; i < enemies.length; i++) if (enemies[i].alive && enemies[i].state === 'diving') n++; return n; }
+function countEntering() { var n = 0; for (var i = 0; i < enemies.length; i++) if (enemies[i].alive && enemies[i].state === 'entering') n++; return n; }
+function launchDive(e, tx, side, delay, endX) {
+  var D = G.diff;
+  e.state = 'diving'; e.delay = delay; e.path = null; e.s = 0;
+  e.speed = D.diveSpeed; e.fireCd = rand(0.5, 1.3);
+  e.params = { tx: tx, side: side, endX: endX };
+  e.escorts = null; e.escortsLaunched = 0;
+}
+function startDive() {
+  var D = G.diff, free = D.maxDivers - countDiving();
+  if (free <= 0 || !player.alive) return;
+  var inForm = [], flags = [], i;
+  for (i = 0; i < enemies.length; i++) {
+    var e = enemies[i];
+    if (!e.alive || e.state !== 'inFormation') continue;
+    inForm.push(e); if (e.type === 3) flags.push(e);
+  }
+  if (!inForm.length) return;
+  var side = Math.random() < 0.5 ? -1 : 1, tx = player.x;
+  if (flags.length && Math.random() < CONFIG.difficulty.flagshipDiveChance) {
+    var fl = flags[(Math.random() * flags.length) | 0], cand = [];
+    for (i = 0; i < inForm.length; i++) if (inForm[i].type === 2) cand.push(inForm[i]);
+    cand.sort(function (a, b) { return Math.abs(a.col - fl.col) - Math.abs(b.col - fl.col); });
+    var esc = cand.slice(0, Math.min(2, free - 1));
+    launchDive(fl, tx, side, 0, clamp(tx, 30, 330));
+    fl.escorts = esc; fl.escortsLaunched = esc.length;
+    for (i = 0; i < esc.length; i++) {
+      var off = (i === 0 ? -24 : 24);
+      launchDive(esc[i], tx + off, side, 0.25 * (i + 1), clamp(tx + off, 30, 330));
+    }
+    Audio_.dive();
+    return;
+  }
+  var pool = (inForm.length > flags.length) ? inForm.filter(function (x) { return x.type !== 3; }) : inForm;
+  var pick = pool[(Math.random() * pool.length) | 0];
+  launchDive(pick, tx, side, 0, clamp(tx + rand(-50, 50), 30, 330));
+  Audio_.dive();
+}
+
+function fireEnemyBullet(x, y) {
+  var D = G.diff;
+  if (countEnemyBullets() >= D.maxEnemyBullets) return;
+  for (var i = 0; i < eBullets.length; i++) {
+    var b = eBullets[i]; if (b.active) continue;
+    b.active = true; b.x = x; b.y = y + 8;
+    b.vx = clamp((player.x - x) * 0.25, -50, 50); b.vy = D.bulletSpeed;
+    return;
+  }
+}
+
+function updateEnemies(dt) {
+  var D = G.diff;
+  for (var i = 0; i < enemies.length; i++) {
+    var e = enemies[i]; if (!e.alive) continue;
+    switch (e.state) {
+      case 'entering':
+        if (e.delay > 0) { e.delay -= dt; e.visible = false; break; }
+        e.visible = true; // fall through
+      case 'returning':
+        e.t += dt / e.dur;
+        var t = Math.min(1, e.t), p = e.pa;
+        bez(p[0], p[1], p[2], p[3], p[4], p[5], slotX(e), e.baseY, t, tmpP);
+        e.x = tmpP.x; e.y = tmpP.y;
+        if (e.t >= 1) { e.state = 'inFormation'; e.x = slotX(e); e.y = e.baseY; }
+        break;
+      case 'inFormation':
+        e.x = slotX(e); e.y = e.baseY;
+        break;
+      case 'diving':
+        if (e.delay > 0) { e.delay -= dt; e.x = slotX(e); e.y = e.baseY; break; }
+        if (!e.path) {
+          e.path = buildDivePath(e.x, e.y, e.params.tx, e.params.side, e.params.endX);
+          e.s = 0;
+        }
+        e.s += e.speed * dt;
+        pathPos(e.path, e.s, tmpP);
+        e.x = tmpP.x; e.y = tmpP.y;
+        if (G.state === 'playing' && player.alive) {
+          e.fireCd -= dt;
+          if (e.fireCd <= 0 && e.y > 70 && e.y < 470) {
+            fireEnemyBullet(e.x, e.y);
+            e.fireCd = (1 / D.fireRate) * rand(0.7, 1.3);
+          }
+        }
+        if (e.s >= e.path.total) startReturn(e);
+        break;
+    }
+  }
+}
+
+/* =====================================================================
+ * Game - state machine, scoring, lives, waves
+ *   states: title, playing, waveIntro, playerDying, paused, gameOver
+ * ===================================================================== */
+var G = {
+  state: 'title', prev: 'title', stateT: 0,
+  score: 0, hi: 0, lives: 3, wave: 1, extraGiven: false, newHigh: false,
+  time: 0, sway: 0, formTime: 0, alive: 0,
+  introT: 0, deathT: 0, gameOverT: 0, diveT: 1, waveEndT: 0,
+  diff: difficulty(1),
+  banner: { text: '', t: 0, dur: 0 },
+  shake: 0, flash: 0, skipDt: false
+};
+
+function setBanner(text) { G.banner.text = text; G.banner.t = 0; G.banner.dur = CONFIG.timing.bannerDur; }
+function saveHi() { if (G.hi > 0) Storage.set('hi', G.hi); }
+
+function addScore(n) {
+  G.score += n;
+  if (G.score > G.hi) { G.hi = G.score; G.newHigh = true; }
+  if (!G.extraGiven && G.score >= CONFIG.player.extraLifeScore) {
+    G.extraGiven = true; G.lives++; setBanner('EXTRA LIFE!'); Audio_.extraLife();
+  }
+}
+
+function newGame() {
+  G.score = 0; G.lives = CONFIG.player.lives; G.wave = 1; G.extraGiven = false; G.newHigh = false;
+  player.x = W / 2; player.alive = true; player.invuln = 0;
+  pBullet.active = false; clearEnemyBullets();
+  startWave();
+}
+function startWave() {
+  G.diff = difficulty(G.wave);
+  clearEnemyBullets(); pBullet.active = false;
+  buildFormation();
+  G.state = 'waveIntro'; G.introT = 0; G.diveT = 1.2; G.waveEndT = 0;
+  setBanner('WAVE ' + G.wave); Audio_.waveStart();
+}
+
+function killEnemy(e, byRam) {
+  var diving = (e.state === 'diving' && e.delay <= 0 && !!e.path);
+  var launched = e.escortsLaunched, alive = 0;
+  if (e.type === 3 && diving && e.escorts) {
+    for (var i = 0; i < e.escorts.length; i++) if (e.escorts[i].alive) alive++;
+  }
+  var pts = pointsFor(e.type, diving, launched, alive);
+  e.alive = false; G.alive--;
+  addScore(pts);
+  spawnBurst(e.x, e.y, CONFIG.palettes[e.type][0], 12, 130);
+  spawnBurst(e.x, e.y, CONFIG.palettes[e.type][1], 5, 90);
+  Audio_.enemyHit();
+  if (pts >= 200) spawnPopup(e.x, e.y, String(pts));
+}
+
+function killPlayer() {
+  G.lives--; player.alive = false; pBullet.active = false; clearEnemyBullets();
+  spawnBurst(player.x, CONFIG.player.y, '#39ff88', 26, 190);
+  spawnBurst(player.x, CONFIG.player.y, '#ffffff', 14, 140);
+  spawnBurst(player.x, CONFIG.player.y, '#ff9a3b', 14, 220);
+  Audio_.playerHit();
+  if (!reducedMotion) { G.shake = 0.35; G.flash = 0.18; }
+  for (var i = 0; i < enemies.length; i++) {
+    var e = enemies[i]; if (!e.alive || e.state !== 'diving') continue;
+    if (e.delay > 0 || !e.path) { e.state = 'inFormation'; e.path = null; e.delay = 0; }
+    else startQuickReturn(e);
+  }
+  G.state = 'playerDying'; G.deathT = 0;
+}
+
+function enterGameOver() {
+  G.state = 'gameOver'; G.gameOverT = 0;
+  clearEnemyBullets(); saveHi();
+}
+
+function respawnPlayer() {
+  player.x = W / 2; player.alive = true; player.invuln = CONFIG.player.invuln;
+  clearEnemyBullets();
+  G.state = 'playing'; G.diveT = 1.5;
+}
+
+function updateStars(dt) {
+  var k = reducedMotion ? 0.3 : 1;
+  for (var i = 0; i < stars.length; i++) {
+    var s = stars[i]; s.y += s.speed * dt * k;
+    if (s.y > H) { s.y -= H; s.x = rand(0, W); }
+  }
+}
+function updateEffects(dt) {
+  var i;
+  for (i = 0; i < particles.length; i++) {
+    var p = particles[i]; if (!p.active) continue;
+    p.life -= dt; if (p.life <= 0) { p.active = false; continue; }
+    p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.98; p.vy *= 0.98;
+  }
+  for (i = 0; i < popups.length; i++) {
+    var q = popups[i]; if (!q.active) continue;
+    q.t += dt; q.y -= 18 * dt; if (q.t > 0.9) q.active = false;
+  }
+  if (G.banner.t < G.banner.dur) G.banner.t += dt;
+  if (G.shake > 0) G.shake = Math.max(0, G.shake - dt);
+  if (G.flash > 0) G.flash = Math.max(0, G.flash - dt);
+}
+
+function updatePlayerAndBullets(dt) {
+  var P = CONFIG.player, i;
+  if (player.alive) {
+    player.x = clamp(player.x + Input.dir * P.speed * dt, P.w / 2 + 2, W - P.w / 2 - 2);
+    if (player.invuln > 0) player.invuln = Math.max(0, player.invuln - dt);
+    if (Input.fire && !pBullet.active) {
+      pBullet.active = true; pBullet.x = player.x; pBullet.y = P.y - P.h / 2;
+      Audio_.shoot();
+    }
+  }
+  if (pBullet.active) {
+    pBullet.y -= P.bulletSpeed * dt;
+    if (pBullet.y < -P.bulletH) pBullet.active = false;
+  }
+  for (i = 0; i < eBullets.length; i++) {
+    var b = eBullets[i]; if (!b.active) continue;
+    b.x += b.vx * dt; b.y += b.vy * dt;
+    if (b.y > H + 10 || b.x < -10 || b.x > W + 10) b.active = false;
+  }
+}
+
+function resolveCollisions() {
+  var P = CONFIG.player, E = CONFIG.enemy, i;
+  // player shot vs enemies
+  if (pBullet.active) {
+    for (i = 0; i < enemies.length; i++) {
+      var e = enemies[i];
+      if (!e.alive || !e.visible) continue;
+      if (aabb(pBullet.x, pBullet.y, P.bulletW, P.bulletH, e.x, e.y, E.hitW, E.hitH)) {
+        pBullet.active = false; killEnemy(e, false); break;
+      }
+    }
+  }
+  if (!player.alive || player.invuln > 0) return;
+  var py = P.y, hit = false;
+  // enemy bullets vs player
+  for (i = 0; i < eBullets.length && !hit; i++) {
+    var b = eBullets[i]; if (!b.active) continue;
+    if (aabb(b.x, b.y, 4, 9, player.x, py, P.hitW, P.hitH)) { b.active = false; hit = true; }
+  }
+  // diving enemies vs player
+  if (!hit) {
+    for (i = 0; i < enemies.length; i++) {
+      var d = enemies[i];
+      if (!d.alive || d.state !== 'diving' || d.delay > 0 || !d.path) continue;
+      if (aabb(d.x, d.y, E.hitW, E.hitH, player.x, py, P.hitW, P.hitH)) { killEnemy(d, true); hit = true; break; }
+    }
+  }
+  if (hit) killPlayer();
+}
+
+function simulate(dt) {
+  G.time += dt; G.formTime += dt;
+  G.sway = Math.sin(G.formTime * CONFIG.formation.swaySpeed * 2) * CONFIG.formation.swayAmp;
+  updateStars(dt); updateEffects(dt);
+  updatePlayerAndBullets(dt);
+  updateEnemies(dt);
+}
+
+function update(dt) {
+  var st = G.state;
+  if (st === 'paused') return;
+  if (st === 'title') { G.time += dt; updateStars(dt); return; }
+  if (st === 'gameOver') {
+    G.time += dt; G.gameOverT += dt; updateStars(dt); updateEffects(dt); return;
+  }
+  simulate(dt);
+  if (st === 'waveIntro') {
+    G.introT += dt;
+    resolveCollisions();
+    if (G.state === 'waveIntro' && G.introT >= CONFIG.timing.waveIntro) G.state = 'playing';
+  } else if (st === 'playing') {
+    resolveCollisions();
+    if (G.state !== 'playing') return;          // player was hit this frame
+    G.diveT -= dt;
+    if (G.diveT <= 0) {
+      if (countEntering() === 0) { startDive(); G.diveT = G.diff.diveInterval * rand(0.75, 1.25); }
+      else G.diveT = 0.3;
+    }
+    if (G.alive <= 0) {
+      clearEnemyBullets();
+      G.waveEndT += dt;
+      if (G.waveEndT >= CONFIG.timing.waveEndDelay) { G.wave++; startWave(); }
+    }
+  } else if (st === 'playerDying') {
+    G.deathT += dt;
+    if (G.lives <= 0) {
+      if (G.deathT >= CONFIG.timing.deathPause) enterGameOver();
+    } else if (G.deathT >= CONFIG.timing.deathPause) {
+      var busy = false;
+      for (var i = 0; i < enemies.length; i++) {
+        var e = enemies[i];
+        if (e.alive && (e.state === 'diving' || e.state === 'returning')) { busy = true; break; }
+      }
+      if (!busy || G.deathT >= 4) respawnPlayer();
+    }
+  }
+}
+
+function togglePause() {
+  var s = G.state;
+  if (s === 'playing' || s === 'waveIntro' || s === 'playerDying') {
+    G.prev = s; G.state = 'paused'; Input.clear(); syncButtons();
+  } else if (s === 'paused') {
+    G.state = G.prev; Input.clear(); G.skipDt = true; syncButtons();
+  }
+}
+function pauseIfRunning() {
+  var s = G.state;
+  if (s === 'playing' || s === 'waveIntro' || s === 'playerDying') togglePause();
+  else Input.clear();
+  saveHi();
+}
+function handleStart(isSpace) {
+  if (G.state === 'title') newGame();
+  else if (G.state === 'gameOver') { if (G.gameOverT >= CONFIG.timing.gameOverLock) newGame(); }
+  else if (G.state === 'paused' && !isSpace) togglePause();
+}
+function toggleMute() { Audio_.setMuted(!Audio_.muted); syncButtons(); }
+
+var btnPause, btnMute;
+function syncButtons() {
+  btnPause.textContent = (G.state === 'paused') ? '\u25B6' : 'II';
+  btnMute.classList.toggle('off', Audio_.muted);
+  btnMute.setAttribute('aria-pressed', Audio_.muted ? 'true' : 'false');
+}
+
+/* =====================================================================
+ * Rendering (the only place scale is applied)
+ * ===================================================================== */
+var ctx;
+function text(s, x, y, size, color, align) {
+  ctx.font = 'bold ' + size + 'px ' + FONT;
+  ctx.textAlign = align || 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = color;
+  ctx.fillText(s, x, y);
+}
+function drawStars() {
+  for (var i = 0; i < stars.length; i++) {
+    var s = stars[i]; ctx.globalAlpha = s.a; ctx.fillStyle = '#cfe3ff';
+    ctx.fillRect(s.x, s.y, s.size, s.size);
+  }
+  ctx.globalAlpha = 1;
+}
+function drawEnemies() {
+  var frameBase = Math.floor(G.time * 3);
+  for (var i = 0; i < enemies.length; i++) {
+    var e = enemies[i]; if (!e.alive || !e.visible) continue;
+    var frame = (e.state === 'inFormation') ? (frameBase + (e.col & 1)) & 1 : (Math.floor(G.time * 8 + e.phase) & 1);
+    Sprites.draw(ctx, e.type, frame, e.x, e.y, 1);
+  }
+}
+function drawPlayer() {
+  if (!player.alive) return;
+  if (player.invuln > 0) {
+    if (reducedMotion) ctx.globalAlpha = 0.5;
+    else if (Math.floor(G.time * 12) % 2 === 0) return;
+  }
+  Sprites.draw(ctx, 4, 0, player.x, CONFIG.player.y, 1);
+  ctx.globalAlpha = 1;
+}
+function drawBullets() {
+  var i;
+  if (pBullet.active) {
+    ctx.fillStyle = CONFIG.colors.playerBullet;
+    ctx.fillRect(pBullet.x - 1.5, pBullet.y - 5, 3, 10);
+  }
+  ctx.fillStyle = CONFIG.colors.enemyBullet;
+  for (i = 0; i < eBullets.length; i++) {
+    var b = eBullets[i]; if (!b.active) continue;
+    ctx.fillRect(b.x - 2, b.y - 4, 4, 9);
+    ctx.fillStyle = '#ffe14a'; ctx.fillRect(b.x - 1, b.y - 2, 2, 4); ctx.fillStyle = CONFIG.colors.enemyBullet;
+  }
+}
+function drawEffects() {
+  var i;
+  for (i = 0; i < particles.length; i++) {
+    var p = particles[i]; if (!p.active) continue;
+    ctx.globalAlpha = clamp(p.life / p.max, 0, 1); ctx.fillStyle = p.color;
+    ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+  }
+  ctx.globalAlpha = 1;
+  for (i = 0; i < popups.length; i++) {
+    var q = popups[i]; if (!q.active) continue;
+    ctx.globalAlpha = clamp(1 - q.t / 0.9, 0, 1);
+    text(q.text, q.x, q.y, 14, CONFIG.colors.accent);
+  }
+  ctx.globalAlpha = 1;
+}
+function drawHud() {
+  text('SCORE ' + padScore(G.score), 8, 16, 14, CONFIG.colors.text, 'left');
+  text('HI ' + padScore(G.hi), W - 8, 16, 14, CONFIG.colors.accent, 'right');
+  // lives (bottom-left) and wave (bottom-right)
+  var shown = Math.min(G.lives, 5), i;
+  for (i = 0; i < shown; i++) Sprites.draw(ctx, 4, 0, 18 + i * 22, H - 16, 0.7);
+  if (G.lives > 5) text('+' + (G.lives - 5), 18 + 5 * 22 - 4, H - 16, 12, CONFIG.colors.text, 'left');
+  text('WAVE ' + G.wave, W - 8, H - 16, 14, CONFIG.colors.cool, 'right');
+}
+function drawBanner() {
+  var b = G.banner;
+  if (b.t >= b.dur) return;
+  var a = b.t < 0.2 ? b.t / 0.2 : (b.t > b.dur - 0.3 ? (b.dur - b.t) / 0.3 : 1);
+  ctx.globalAlpha = clamp(a, 0, 1);
+  text(b.text, W / 2, 330, 28, CONFIG.colors.accent);
+  ctx.globalAlpha = 1;
+}
+function startHint() { return Input.isTouch ? 'TAP TO START' : 'PRESS ENTER / CLICK TO START'; }
+function drawTitle() {
+  text(CONFIG.TITLE, W / 2 + 2, 122, 36, CONFIG.colors.hot);
+  text(CONFIG.TITLE, W / 2, 120, 36, CONFIG.colors.accent);
+  text('HIGH SCORE ' + padScore(G.hi), W / 2, 168, 14, CONFIG.colors.text);
+  var names = ['BASIC 30 / 60', 'MID-TIER 40 / 80', 'ESCORT 50 / 100', 'FLAGSHIP 60 / 150+'];
+  for (var i = 0; i < 4; i++) {
+    Sprites.draw(ctx, i, Math.floor(G.time * 2) & 1, 70, 220 + i * 32, 1.3);
+    text(names[i], 100, 220 + i * 32, 13, CONFIG.colors.text, 'left');
+  }
+  text('FLAGSHIP BONUS UP TO 800', W / 2, 360, 12, CONFIG.colors.cool);
+  if (Math.floor(G.time * 2) % 2 === 0) text(startHint(), W / 2, 420, 16, CONFIG.colors.text);
+  if (Input.isTouch) {
+    text('\u25C0 \u25B6 MOVE   FIRE SHOOT', W / 2, 470, 13, '#bbbbbb');
+    text('II PAUSE', W / 2, 492, 13, '#bbbbbb');
+  } else {
+    text('\u2190 \u2192 OR A D  MOVE', W / 2, 466, 13, '#bbbbbb');
+    text('SPACE FIRE   P PAUSE   M MUTE', W / 2, 488, 13, '#bbbbbb');
+  }
+}
+function drawOverlayDim() { ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(0, 0, W, H); }
+function drawGameOver() {
+  drawOverlayDim();
+  text('GAME OVER', W / 2, 230, 34, CONFIG.colors.hot);
+  text('SCORE ' + padScore(G.score), W / 2, 290, 18, CONFIG.colors.text);
+  text('HIGH ' + padScore(G.hi), W / 2, 318, 16, CONFIG.colors.accent);
+  if (G.newHigh) text('NEW HIGH SCORE!', W / 2, 360, 20, CONFIG.colors.cool);
+  if (G.gameOverT >= CONFIG.timing.gameOverLock && Math.floor(G.time * 2) % 2 === 0)
+    text(Input.isTouch ? 'TAP TO RESTART' : 'PRESS ENTER / CLICK TO RESTART', W / 2, 430, 16, CONFIG.colors.text);
+}
+function drawPaused() {
+  drawOverlayDim();
+  text('PAUSED', W / 2, 270, 34, CONFIG.colors.accent);
+  text(Input.isTouch ? 'TAP TO RESUME' : 'P / ESC / ENTER / CLICK TO RESUME', W / 2, 330, 14, CONFIG.colors.text);
+  if (!Input.isTouch) text('M MUTE', W / 2, 358, 13, '#bbbbbb');
+}
+
+function render() {
+  var ox = 0, oy = 0;
+  if (G.shake > 0 && !reducedMotion) { ox = rand(-3, 3); oy = rand(-3, 3); }
+  Display.applyTransform(ox, oy);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = CONFIG.colors.bg;
+  ctx.fillRect(-10, -10, W + 20, H + 20);
+  drawStars();
+  var st = G.state;
+  if (st === 'title') { drawTitle(); drawHud0(); return; }
+  drawEnemies(); drawBullets(); drawPlayer(); drawEffects(); drawHud(); drawBanner();
+  if (G.flash > 0 && !reducedMotion) { ctx.globalAlpha = G.flash / 0.18 * 0.35; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+  if (st === 'gameOver') drawGameOver();
+  else if (st === 'paused') drawPaused();
+}
+function drawHud0() { /* title screen has no in-game HUD */ }
+
+/* =====================================================================
+ * Loop - requestAnimationFrame with capped delta time
+ * ===================================================================== */
+var lastTs = 0;
+function frame(ts) {
+  window.requestAnimationFrame(frame);
+  if (document.hidden) { lastTs = 0; return; }
+  if (!lastTs || G.skipDt) { lastTs = ts; G.skipDt = false; }
+  var dt = Math.min(CONFIG.maxDt, Math.max(0, (ts - lastTs) / 1000));
+  lastTs = ts;
+  update(dt);
+  render();
+}
+
+/* =====================================================================
+ * Boot - feature detection and initialization
+ * ===================================================================== */
+function boot() {
+  var app = document.getElementById('app'), stage = document.getElementById('stage');
+  var canvas = document.getElementById('game');
+  btnPause = document.getElementById('btnPause'); btnMute = document.getElementById('btnMute');
+  document.title = CONFIG.TITLE;
+  document.getElementById('gameName').textContent = CONFIG.TITLE;
+  var c2d = canvas.getContext ? canvas.getContext('2d') : null;
+  if (!c2d) {
+    canvas.style.display = 'none';
+    document.getElementById('fallback').style.display = 'block';
+    return;
+  }
+  ctx = c2d;
+  G.hi = Storage.getInt('hi');
+  Audio_.muted = Storage.get('muted') === '1';
+
+  var coarse = false;
+  try { coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches); } catch (e) { /* ignore */ }
+  Input.onTouchMode = function () { app.classList.add('touch'); Display.fit(); };
+  Input.isTouch = false;
+  if (coarse) Input.markTouch();
+
+  Input.onStart = handleStart; Input.onPause = togglePause; Input.onMute = toggleMute;
+  initPools();
+  Display.onDprChange = function (dpr) { Sprites.build(dpr); };
+  Display.init({ app: app, stage: stage, canvas: canvas, ctx: ctx });
+  if (!Sprites.ready) Sprites.build(Display.dpr);
+  Input.init({
+    app: app, stage: stage, btnPause: btnPause, btnMute: btnMute,
+    left: document.getElementById('padLeft'), right: document.getElementById('padRight'), fire: document.getElementById('padFire')
+  });
+
+  // Auto-pause when the tab is hidden or the window loses focus; never auto-resume.
+  document.addEventListener('visibilitychange', function () { if (document.hidden) { pauseIfRunning(); lastTs = 0; } else { lastTs = 0; } });
+  window.addEventListener('blur', pauseIfRunning);
+  window.addEventListener('pagehide', saveHi);
+
+  syncButtons();
+  window.requestAnimationFrame(frame);
+}
+
+boot();
+})();
+</script>
+</body>
+</html>
