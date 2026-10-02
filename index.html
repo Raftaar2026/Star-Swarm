@@ -3,16 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#05060f">
 <title>Star Swarm</title>
 <style>
+  :root { --ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
   html, body {
-    margin: 0; padding: 0; height: 100%; background: #000; color: #fff;
+    margin: 0; padding: 0; height: 100%; background: #05060f; color: #e8ecff;
     overflow: hidden; overscroll-behavior: none;
   }
   body {
     position: fixed; inset: 0; width: 100%;
-    font-family: ui-monospace, Menlo, Consolas, "Courier New", monospace;
+    font-family: var(--ui);
+    background: radial-gradient(120% 70% at 50% 0%, #161c44 0%, #0a0c22 45%, #05060f 100%);
     -webkit-user-select: none; user-select: none;
     -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
     touch-action: none;
@@ -25,40 +27,62 @@
     touch-action: none; -webkit-touch-callout: none;
   }
   #topbar {
-    flex: 0 0 auto; height: 44px; display: flex; align-items: center;
-    justify-content: space-between; padding: 0 8px; box-sizing: border-box;
+    flex: 0 0 auto; height: 50px; display: flex; align-items: center;
+    justify-content: space-between; padding: 0 10px; box-sizing: border-box;
   }
-  #topbar .name { font-weight: bold; letter-spacing: 2px; color: #ffd23b; font-size: 14px; }
+  #topbar .name {
+    font: italic 900 15px var(--ui); letter-spacing: 3px;
+    background: linear-gradient(90deg, #ffe680, #ff5aa0 60%, #8a7bff);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
   #topbar .tools { display: flex; gap: 8px; }
   .btn {
-    min-width: 44px; height: 44px; box-sizing: border-box; padding: 0 8px;
-    background: rgba(255,255,255,0.14); color: #fff; font: bold 16px ui-monospace, Menlo, Consolas, monospace;
-    border: 2px solid rgba(255,255,255,0.6); border-radius: 10px; cursor: pointer;
+    position: relative; min-width: 44px; height: 44px; box-sizing: border-box; padding: 0 10px;
+    color: #e8ecff; font: 800 16px var(--ui);
+    background: linear-gradient(180deg, rgba(255,255,255,0.13), rgba(255,255,255,0.03));
+    border: 1px solid rgba(160,180,255,0.35); border-radius: 14px; cursor: pointer;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 4px 14px rgba(0,0,0,0.45);
     touch-action: none; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none;
+    transition: transform 60ms ease-out, background-color 60ms;
   }
-  .btn.down, .btn:active { background: rgba(255,255,255,0.45); }
-  .btn.off { text-decoration: line-through; opacity: 0.6; }
+  .btn:active { transform: scale(0.94); }
+  .btn svg { width: 20px; height: 20px; display: block; margin: auto; pointer-events: none; }
+  .btn .ico-alt { display: none; }
+  .btn.alt .ico-main { display: none; }
+  .btn.alt .ico-alt { display: block; }
+  .btn.off { opacity: 0.7; }
   #stage {
     flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center;
     touch-action: none;
   }
-  canvas { display: block; background: #000; touch-action: none; outline: none; }
+  canvas {
+    display: block; background: #060716; touch-action: none; outline: none; border-radius: 12px;
+    box-shadow: 0 0 0 1px rgba(130,150,255,0.16), 0 12px 40px rgba(0,0,0,0.55), 0 0 60px rgba(90,80,255,0.12);
+  }
   #controls {
-    display: none; flex: 0 0 auto; height: 104px; box-sizing: border-box; padding: 0 14px;
+    display: none; flex: 0 0 auto; height: 108px; box-sizing: border-box; padding: 0 16px;
     align-items: center; justify-content: space-between; touch-action: none;
   }
   .touch #controls { display: flex; }
   #controls .grp { display: flex; gap: 12px; }
-  .pad {
-    width: 68px; height: 68px; min-width: 44px; min-height: 44px; font-size: 28px; padding: 0;
-    background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.65);
+  .pad { width: 70px; height: 70px; min-width: 44px; min-height: 44px; padding: 0; border-radius: 20px; }
+  .pad svg { width: 28px; height: 28px; }
+  .pad.down {
+    background: linear-gradient(180deg, rgba(120,170,255,0.45), rgba(80,110,255,0.25));
+    border-color: rgba(170,200,255,0.9); transform: scale(0.94);
+    box-shadow: 0 0 20px rgba(110,150,255,0.55), inset 0 1px 0 rgba(255,255,255,0.3);
   }
   .pad.fire {
-    width: 96px; height: 96px; border-radius: 50%; font-size: 18px;
-    background: rgba(255,59,107,0.35); border-color: rgba(255,120,150,0.9);
+    width: 98px; height: 98px; border-radius: 50%; font: 900 17px var(--ui); letter-spacing: 2px;
+    background: radial-gradient(circle at 50% 32%, #ff7aa6 0%, #e0306f 55%, #8c1240 100%);
+    border: 2px solid rgba(255,160,200,0.85);
+    box-shadow: 0 0 24px rgba(255,60,120,0.45), inset 0 2px 0 rgba(255,255,255,0.3);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
   }
-  .pad.down { background: rgba(255,255,255,0.5); }
-  .pad.fire.down { background: rgba(255,59,107,0.75); }
+  .pad.fire.down {
+    background: radial-gradient(circle at 50% 32%, #ffb0cb 0%, #ff4f8b 55%, #b01a55 100%);
+    box-shadow: 0 0 34px rgba(255,80,140,0.8), inset 0 2px 0 rgba(255,255,255,0.4);
+  }
   #fallback { display: none; padding: 24px; text-align: center; font-size: 16px; line-height: 1.5; }
 </style>
 </head>
@@ -67,8 +91,14 @@
   <div id="topbar">
     <span class="name" id="gameName">STAR SWARM</span>
     <div class="tools">
-      <button class="btn" id="btnMute" type="button" tabindex="-1" aria-label="Toggle sound" aria-pressed="false">&#9834;</button>
-      <button class="btn" id="btnPause" type="button" tabindex="-1" aria-label="Pause or resume">II</button>
+      <button class="btn" id="btnMute" type="button" tabindex="-1" aria-label="Toggle sound" aria-pressed="false">
+        <svg class="ico-main" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>
+        <svg class="ico-alt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 9l5 6M22 9l-5 6"/></svg>
+      </button>
+      <button class="btn" id="btnPause" type="button" tabindex="-1" aria-label="Pause or resume">
+        <svg class="ico-main" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1.2" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1.2" fill="currentColor"/></svg>
+        <svg class="ico-alt" viewBox="0 0 24 24"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" fill="currentColor"/></svg>
+      </button>
     </div>
   </div>
   <div id="stage">
@@ -77,8 +107,8 @@
   </div>
   <div id="controls">
     <div class="grp">
-      <button class="btn pad" id="padLeft" type="button" tabindex="-1" aria-label="Move left">&#9664;</button>
-      <button class="btn pad" id="padRight" type="button" tabindex="-1" aria-label="Move right">&#9654;</button>
+      <button class="btn pad" id="padLeft" type="button" tabindex="-1" aria-label="Move left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <button class="btn pad" id="padRight" type="button" tabindex="-1" aria-label="Move right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
     </div>
     <button class="btn pad fire" id="padFire" type="button" tabindex="-1" aria-label="Fire">FIRE</button>
   </div>
@@ -98,8 +128,15 @@
  *   Mobile : on-screen left / right buttons and FIRE button; tap the playfield to start or resume.
  *
  * TUNING
- *   Every tunable value (speeds, scores, wave scaling, timings, colors, the game name) lives in the
- *   CONFIG object just below. Edit it and reload.
+ *   Every tunable value (speeds, scores, wave scaling, timings, colors, effects, quality, the game name)
+ *   lives in the CONFIG object just below. Edit it and reload.
+ *
+ * GRAPHICS / PERFORMANCE NOTES
+ *   All glow is "baked": ships, bullets, glow dots, rings, text and the nebula are drawn ONCE into small
+ *   offscreen canvases (rebuilt only when the display scale changes). Each frame only copies those images
+ *   (drawImage) - no shadowBlur, no per-frame gradients, no per-frame allocation in hot loops.
+ *   If the frame rate stays below CONFIG.quality.minFps during play, the game drops to a lighter mode
+ *   (lower resolution, no nebula, no trails, fewer particles) automatically.
  */
 (function () {
 'use strict';
@@ -138,24 +175,30 @@ var CONFIG = {
     maxEnemyBullets: [3, 7],        // enemy bullets on screen
     flagshipDiveChance: 0.35
   },
-  timing: { waveIntro: 1.5, waveEndDelay: 1.0, deathPause: 1.6, gameOverLock: 1.0, bannerDur: 1.5 },
+  timing: { waveIntro: 1.5, waveEndDelay: 1.0, deathPause: 1.6, gameOverLock: 1.0, bannerDur: 1.6 },
   colors: {
-    bg: '#000000', text: '#ffffff', accent: '#ffd23b', hot: '#ff3b6b', cool: '#4de2ff',
-    playerBullet: '#fffb8a', enemyBullet: '#ff6b3b'
+    bgTop: '#060716', bgMid: '#0b0c26', bgBottom: '#150a2a',
+    text: '#f2f4ff', dim: '#a9b4e8', accent: '#ffd84d', hot: '#ff4f8b', cool: '#5fe3ff',
+    playerBullet: '#8ff6ff', enemyBullet: '#ff7a3d'
   },
-  // palette: [main, accent, white]
+  // palette per ship: [main, accent, highlight]  (hex only)
   palettes: [
-    ['#4da3ff', '#ff3b6b', '#ffffff'],   // basic
-    ['#b45cff', '#ffd23b', '#ffffff'],   // mid-tier
-    ['#ff5a3c', '#ffe14a', '#ffffff'],   // escort
-    ['#ffd23b', '#ff3b6b', '#ffffff'],   // flagship
-    ['#39ff88', '#ff9a3b', '#ffffff']    // player
+    ['#3a9bff', '#7df9ff', '#d6f3ff'],   // basic    "Drone"
+    ['#9b6bff', '#ff5ad1', '#efe1ff'],   // mid-tier "Stinger"
+    ['#ff5a4e', '#ffb347', '#ffe3d6'],   // escort   "Crab"
+    ['#ffc93a', '#ff4f9a', '#fff6d6'],   // flagship "Crown"
+    ['#35f0b0', '#36c8ff', '#e6fff7']    // player
   ],
-  particles: 200, popups: 8, enemyBulletPool: 14, stars: 70
+  fx: { trails: true, nebula: true, shakePx: 4, starCount: 80 },
+  quality: { auto: true, minFps: 45, lowDpr: 1.5 },   // auto-switch to light mode below minFps
+  particles: 220, popups: 8, rings: 16, flashes: 10, enemyBulletPool: 14
 };
 
-var W = CONFIG.W, H = CONFIG.H;
-var FONT = 'ui-monospace, Menlo, Consolas, "Courier New", monospace';
+var W = CONFIG.W, H = CONFIG.H, TAU = Math.PI * 2;
+function gcd(a, b) { return b ? gcd(b, a % b) : a; }
+var RATIO_W = W / gcd(W, H), RATIO_H = H / gcd(W, H);
+var FONT_MONO = 'ui-monospace, Menlo, Consolas, "Courier New", monospace';
+var FONT_UI = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
 /* =====================================================================
  * Utils
@@ -163,6 +206,8 @@ var FONT = 'ui-monospace, Menlo, Consolas, "Courier New", monospace';
 function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
 function lerp(a, b, t) { return a + (b - a) * t; }
 function rand(a, b) { return a + Math.random() * (b - a); }
+function easeOut(t) { return 1 - (1 - t) * (1 - t); }
+function wrapAngle(a) { while (a > Math.PI) a -= TAU; while (a < -Math.PI) a += TAU; return a; }
 function bez(x0, y0, x1, y1, x2, y2, x3, y3, t, out) {
   var u = 1 - t, a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
   out.x = a * x0 + b * x1 + c * x2 + d * x3;
@@ -172,6 +217,12 @@ function aabb(ax, ay, aw, ah, bx, by, bw, bh) { // centered boxes
   return Math.abs(ax - bx) * 2 < (aw + bw) && Math.abs(ay - by) * 2 < (ah + bh);
 }
 function padScore(n) { var s = String(n); while (s.length < 7) s = '0' + s; return s; }
+function hexRgb(h) { var n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+function mixHex(h, t, k) {
+  var a = hexRgb(h), b = hexRgb(t);
+  return 'rgb(' + Math.round(a[0] + (b[0] - a[0]) * k) + ',' + Math.round(a[1] + (b[1] - a[1]) * k) + ',' + Math.round(a[2] + (b[2] - a[2]) * k) + ')';
+}
+function rgba(h, a) { var c = hexRgb(h); return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')'; }
 
 // Pure game-rule helpers (no state, no rendering)
 function difficulty(wave) {
@@ -226,7 +277,7 @@ var Audio_ = {
         if (!AC) return;
         this.ctx = new AC();
         this.master = this.ctx.createGain();
-        this.master.gain.value = 0.22;
+        this.master.gain.value = this.muted ? 0 : 0.22;
         this.master.connect(this.ctx.destination);
         // silent buffer helps unlock older iOS
         var b = this.ctx.createBuffer(1, 1, 22050), s = this.ctx.createBufferSource();
@@ -379,8 +430,8 @@ var Input = {
  * Display - canvas sizing, DPR, letterboxing
  * ===================================================================== */
 var Display = {
-  app: null, stage: null, canvas: null, ctx: null, dpr: 1, cssW: 0, cssH: 0,
-  onDprChange: null,
+  app: null, stage: null, canvas: null, ctx: null, cssW: 0, cssH: 0,
+  maxDpr: CONFIG.maxDpr, onScaleChange: null,
   fit: function () {
     if (!this.app || !this.stage || !this.canvas) return;   // not initialised yet
     var h = window.innerHeight || document.documentElement.clientHeight;
@@ -388,18 +439,28 @@ var Display = {
     var sw = this.stage.clientWidth, sh = this.stage.clientHeight;
     if (sw <= 0 || sh <= 0) return;
     var s = Math.min(sw / W, sh / H);
-    var cw = Math.max(1, Math.floor(W * s)), ch = Math.max(1, Math.floor(H * s));
-    var dpr = Math.min(window.devicePixelRatio || 1, CONFIG.maxDpr);
-    this.canvas.style.width = cw + 'px';
-    this.canvas.style.height = ch + 'px';
-    this.canvas.width = Math.round(cw * dpr);
-    this.canvas.height = Math.round(ch * dpr);
-    this.cssW = cw; this.cssH = ch;
-    if (dpr !== this.dpr || !Sprites.ready) { this.dpr = dpr; if (this.onDprChange) this.onDprChange(dpr); }
+    var dpr = Math.min(window.devicePixelRatio || 1, this.maxDpr);
+    // Backing store is an exact multiple of the 9:16 logical grid, so x and y scale are identical and
+    // baked sprites can be copied 1:1 onto whole device pixels (the fastest, crispest path).
+    var units = Math.max(1, Math.floor(W * s * dpr / RATIO_W));
+    var dw = units * RATIO_W, dh = units * RATIO_H;
+    if (this.canvas.width !== dw || this.canvas.height !== dh) { this.canvas.width = dw; this.canvas.height = dh; }
+    this.canvas.style.width = (dw / dpr) + 'px';
+    this.canvas.style.height = (dh / dpr) + 'px';
+    this.cssW = dw / dpr; this.cssH = dh / dpr;
+    var S = dw / W, self = this;            // device pixels per logical unit
+    clearTimeout(this.rebuildTimer);
+    if (!Sprites.ready || Math.abs(S - Sprites.scale) / Sprites.scale > 0.08) {
+      if (this.onScaleChange) this.onScaleChange(S);
+    } else if (Math.abs(Math.min(S, 3) - Sprites.scale) > 1e-6) {
+      // small change (e.g. mobile address bar): keep drawing scaled, rebuild once things settle
+      this.rebuildTimer = setTimeout(function () { if (self.onScaleChange) self.onScaleChange(self.canvas.width / W); }, 400);
+    }
   },
+  rebuildTimer: 0,
   applyTransform: function (ox, oy) {
-    this.ctx.setTransform(this.canvas.width / W, 0, 0, this.canvas.height / H,
-      (ox || 0) * this.canvas.width / W, (oy || 0) * this.canvas.height / H);
+    var kx = this.canvas.width / W, ky = this.canvas.height / H;
+    this.ctx.setTransform(kx, 0, 0, ky, (ox || 0) * kx, (oy || 0) * ky);
   },
   init: function (els) {
     this.app = els.app; this.stage = els.stage; this.canvas = els.canvas; this.ctx = els.ctx;
@@ -412,162 +473,356 @@ var Display = {
   }
 };
 
-/* =====================================================================
- * Sprites - pixel maps drawn in code, pre-rendered to offscreen canvases
- *   '.' empty, '1' main, '2' accent, '3' white
- * ===================================================================== */
-var SPRITE_MAPS = {
-  basic: [[
-    '..1.....1..',
-    '...1...1...',
-    '..1111111..',
-    '.112131211.',
-    '11111111111',
-    '1.1111111.1',
-    '1.1.....1.1',
-    '...11.11...'
-  ], [
-    '..1.....1..',
-    '...1...1...',
-    '..1111111..',
-    '.112131211.',
-    '11111111111',
-    '.111111111.',
-    '1..1...1..1',
-    '.1.......1.'
-  ]],
-  mid: [[
-    '1....1....1',
-    '.1..111..1.',
-    '..1111111..',
-    '.112313211.',
-    '11111111111',
-    '1.1111111.1',
-    '1...1.1...1',
-    '....1.1....'
-  ], [
-    '1....1....1',
-    '.1..111..1.',
-    '..1111111..',
-    '.112313211.',
-    '11111111111',
-    '.111111111.',
-    '1..1...1..1',
-    '1.........1'
-  ]],
-  escort: [[
-    '....111....',
-    '...11111...',
-    '1..11111..1',
-    '11.12121.11',
-    '11111111111',
-    '1.1.111.1.1',
-    '1...111...1',
-    '....1.1....'
-  ], [
-    '....111....',
-    '...11111...',
-    '.1.11111.1.',
-    '..1121211..',
-    '11111111111',
-    '1.1.111.1.1',
-    '..1.111.1..',
-    '....1.1....'
-  ]],
-  flagship: [[
-    '..1..1..1..',
-    '..1.111.1..',
-    '..1111111..',
-    '.113212311.',
-    '11111111111',
-    '1.1111111.1',
-    '1..11111..1',
-    '...1...1...'
-  ], [
-    '..1..1..1..',
-    '..1.111.1..',
-    '..1111111..',
-    '.113212311.',
-    '11111111111',
-    '.111111111.',
-    '.1.11111.1.',
-    '1.........1'
-  ]],
-  player: [[
-    '.....3.....',
-    '.....1.....',
-    '....111....',
-    '....111....',
-    '1..11311..1',
-    '1.1111111.1',
-    '11111111111',
-    '11.11111.11',
-    '1...2.2...1'
-  ]]
-};
-var SPRITE_TYPE_KEYS = ['basic', 'mid', 'escort', 'flagship', 'player'];
-var Sprites = {
-  ready: false, cache: {},
-  build: function (dpr) {
-    var px = Math.max(2, Math.round(2 * dpr)); // device px per map cell
-    this.cache = {};
-    for (var ti = 0; ti < SPRITE_TYPE_KEYS.length; ti++) {
-      var key = SPRITE_TYPE_KEYS[ti], frames = SPRITE_MAPS[key], pal = CONFIG.palettes[ti], list = [];
-      for (var f = 0; f < frames.length; f++) {
-        var map = frames[f], rows = map.length, cols = map[0].length;
-        var c = document.createElement('canvas');
-        c.width = cols * px; c.height = rows * px;
-        var g = c.getContext('2d');
-        for (var y = 0; y < rows; y++) {
-          for (var x = 0; x < cols; x++) {
-            var ch = map[y].charAt(x);
-            if (ch === '.') continue;
-            g.fillStyle = pal[parseInt(ch, 10) - 1];
-            g.fillRect(x * px, y * px, px, px);
-          }
-        }
-        list.push({ c: c, w: cols * 2, h: rows * 2 });
-      }
-      this.cache[ti] = list;
+/* Adaptive quality: if play runs below CONFIG.quality.minFps for two 60-frame windows in a row
+   (about 2-4 s), switch once to light mode: 1.5x resolution, no dive trails, half the particles. */
+var Quality = {
+  low: false, acc: 0, n: 0, bad: 0,
+  sample: function (rawMs) {
+    if (this.low || !CONFIG.quality.auto || rawMs <= 0 || rawMs > 100) return;
+    this.acc += rawMs; this.n++;
+    if (this.n >= 60) {
+      var avg = this.acc / this.n; this.acc = 0; this.n = 0;
+      if (avg > 1000 / CONFIG.quality.minFps) { if (++this.bad >= 2) this.setLow(); } else this.bad = 0;
     }
+  },
+  setLow: function () {
+    this.low = true;
+    Display.maxDpr = Math.min(Display.maxDpr, CONFIG.quality.lowDpr);
+    Display.fit();
+  }
+};
+
+/* =====================================================================
+ * Sprites - vector ships drawn in code and BAKED (with glow) into offscreen canvases.
+ *   Rebuilt only when the display scale changes. Per frame we only drawImage().
+ * ===================================================================== */
+function makeCanvas(w, h) {
+  var c = document.createElement('canvas');
+  c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h));
+  return c;
+}
+// Draws `draw(g)` centred in a (w x h + pad) canvas at S device px per unit; glow pass first, crisp pass on top.
+function bake(w, h, pad, S, draw, glow, blur) {
+  var c = makeCanvas((w + pad * 2) * S, (h + pad * 2) * S), g = c.getContext('2d');
+  g.setTransform(S, 0, 0, S, (w / 2 + pad) * S, (h / 2 + pad) * S);
+  if (glow) { g.save(); g.shadowColor = glow; g.shadowBlur = blur * S; draw(g); g.restore(); }
+  draw(g);
+  return { c: c, w: w + pad * 2, h: h + pad * 2 };
+}
+function lg(g, x0, y0, x1, y1, stops) {
+  var gr = g.createLinearGradient(x0, y0, x1, y1);
+  for (var i = 0; i < stops.length; i += 2) gr.addColorStop(stops[i], stops[i + 1]);
+  return gr;
+}
+function rg(g, x0, y0, r0, x1, y1, r1, stops) {
+  var gr = g.createRadialGradient(x0, y0, r0, x1, y1, r1);
+  for (var i = 0; i < stops.length; i += 2) gr.addColorStop(stops[i], stops[i + 1]);
+  return gr;
+}
+function dot(g, x, y, r) { g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); }
+function rrect(g, x, y, w, h, r) {
+  g.beginPath(); g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
+}
+
+// Ship shapes. Origin = centre, +y = down (enemies face the player). k = wing-flap phase 0..1. P = palette.
+var SHAPES = {
+  basic: function (g, k, P) {           // "Drone": round body, membrane wings, antennae
+    var m = P[0], a = P[1], hi = P[2], f = (k - 0.5) * 6, s;
+    for (s = -1; s <= 1; s += 2) {
+      g.beginPath(); g.moveTo(s * 3, -3);
+      g.quadraticCurveTo(s * 13, -9 + f, s * 12, 1 + f * 0.4);
+      g.quadraticCurveTo(s * 8, 5, s * 3, 3); g.closePath();
+      g.fillStyle = lg(g, 0, -9, s * 12, 4, [0, mixHex(m, '#ffffff', 0.35), 1, mixHex(m, '#000000', 0.5)]);
+      g.fill(); g.strokeStyle = rgba(a, 0.8); g.lineWidth = 0.8; g.stroke();
+    }
+    g.lineCap = 'round'; g.strokeStyle = mixHex(m, '#ffffff', 0.4); g.lineWidth = 1;
+    g.beginPath(); g.moveTo(-1.5, -6.5); g.lineTo(-4, -10); g.moveTo(1.5, -6.5); g.lineTo(4, -10); g.stroke();
+    g.fillStyle = a; dot(g, -4, -10, 1.1); dot(g, 4, -10, 1.1);
+    g.fillStyle = rg(g, -1.5, -3, 0.5, 0, 0, 9, [0, hi, 0.45, m, 1, mixHex(m, '#000000', 0.55)]);
+    g.beginPath(); g.ellipse(0, 0, 5.5, 7.5, 0, 0, TAU); g.fill();
+    g.strokeStyle = rgba(a, 0.55); g.lineWidth = 0.8;
+    g.beginPath(); g.moveTo(-4, 0.5); g.quadraticCurveTo(0, 2.5, 4, 0.5); g.stroke();
+    g.fillStyle = a; dot(g, -2.2, 3.6, 1.5); dot(g, 2.2, 3.6, 1.5);
+    g.fillStyle = '#ffffff'; dot(g, -2.2, 3.6, 0.6); dot(g, 2.2, 3.6, 0.6);
+  },
+  mid: function (g, k, P) {             // "Stinger": diamond body, swept wings, glowing core
+    var m = P[0], a = P[1], hi = P[2], f = (k - 0.5) * 5, s;
+    for (s = -1; s <= 1; s += 2) {
+      g.beginPath(); g.moveTo(s * 4, -4); g.lineTo(s * 11.5, -10 + f); g.lineTo(s * 10, -2 + f * 0.5);
+      g.lineTo(s * 12, 4); g.lineTo(s * 5, 5); g.closePath();
+      g.fillStyle = lg(g, 0, -10, s * 12, 5, [0, mixHex(m, '#ffffff', 0.3), 1, mixHex(m, '#000000', 0.55)]);
+      g.fill(); g.strokeStyle = rgba(a, 0.75); g.lineWidth = 0.8; g.stroke();
+    }
+    g.beginPath(); g.moveTo(0, -10); g.lineTo(6.5, -1); g.lineTo(0, 10); g.lineTo(-6.5, -1); g.closePath();
+    g.fillStyle = lg(g, 0, -10, 0, 10, [0, hi, 0.35, m, 1, mixHex(m, '#000000', 0.5)]); g.fill();
+    g.strokeStyle = rgba(hi, 0.5); g.lineWidth = 0.7;
+    g.beginPath(); g.moveTo(0, -9); g.lineTo(0, 8); g.stroke();
+    g.fillStyle = rg(g, 0, 1, 0, 0, 1, 3.2, [0, '#ffffff', 0.4, a, 1, rgba(a, 0)]); dot(g, 0, 1, 3.2);
+    g.fillStyle = a; g.beginPath(); g.moveTo(-1.6, 9); g.lineTo(1.6, 9); g.lineTo(0, 13); g.closePath(); g.fill();
+  },
+  escort: function (g, k, P) {          // "Crab": shell, legs, two pincers
+    var m = P[0], a = P[1], hi = P[2], f = (k - 0.5) * 4, s, i;
+    g.lineCap = 'round'; g.strokeStyle = mixHex(m, '#000000', 0.3); g.lineWidth = 1.2;
+    g.beginPath();
+    for (s = -1; s <= 1; s += 2) for (i = 0; i < 3; i++) { g.moveTo(s * 5, -3 + i * 2.5); g.lineTo(s * 9.5, -5 + i * 3.5 + (i === 1 ? f * 0.4 : 0)); }
+    g.stroke();
+    for (s = -1; s <= 1; s += 2) {
+      g.strokeStyle = mixHex(m, '#ffffff', 0.25); g.lineWidth = 2.6;
+      g.beginPath(); g.moveTo(s * 5, 2); g.quadraticCurveTo(s * 13, 1 + f, s * 10.5, 8.5); g.stroke();
+      g.strokeStyle = a; g.lineWidth = 1.6;
+      g.beginPath(); g.moveTo(s * 10.5, 8.5); g.lineTo(s * 7.5, 8 - f * 0.5); g.stroke();
+      g.fillStyle = a; dot(g, s * 10.5, 8.5, 1.4);
+    }
+    g.fillStyle = rg(g, -2, -4, 0.5, 0, -1, 9, [0, hi, 0.45, m, 1, mixHex(m, '#000000', 0.55)]);
+    g.beginPath(); g.ellipse(0, -1, 7.5, 6.5, 0, 0, TAU); g.fill();
+    g.strokeStyle = rgba(a, 0.7); g.lineWidth = 0.9;
+    g.beginPath(); g.moveTo(-5, -3.5); g.quadraticCurveTo(0, -6.5, 5, -3.5);
+    g.moveTo(-6, 0); g.quadraticCurveTo(0, -3, 6, 0); g.stroke();
+    g.fillStyle = '#ffffff'; dot(g, -2.6, 2.6, 1.4); dot(g, 2.6, 2.6, 1.4);
+    g.fillStyle = '#2a0a12'; dot(g, -2.6, 2.9, 0.7); dot(g, 2.6, 2.9, 0.7);
+  },
+  flagship: function (g, k, P) {        // "Crown": manta body, crown spikes, gem core
+    var m = P[0], a = P[1], hi = P[2], f = (k - 0.5) * 5;
+    g.fillStyle = lg(g, 0, -13, 0, -5, [0, '#ffffff', 0.3, a, 1, m]);
+    g.beginPath(); g.moveTo(-7, -5); g.lineTo(-5.5, -10.5); g.lineTo(-3, -6.5); g.lineTo(0, -13);
+    g.lineTo(3, -6.5); g.lineTo(5.5, -10.5); g.lineTo(7, -5); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(0, -7);
+    g.bezierCurveTo(6, -8.5, 11, -5 + f, 14, -0.5 + f);
+    g.bezierCurveTo(11.5, 3, 8, 6, 4, 7.5);
+    g.lineTo(0, 11); g.lineTo(-4, 7.5);
+    g.bezierCurveTo(-8, 6, -11.5, 3, -14, -0.5 + f);
+    g.bezierCurveTo(-11, -5 + f, -6, -8.5, 0, -7); g.closePath();
+    g.fillStyle = lg(g, 0, -8, 0, 11, [0, hi, 0.35, m, 1, mixHex(m, '#5a1a00', 0.6)]); g.fill();
+    g.strokeStyle = rgba(hi, 0.6); g.lineWidth = 0.8; g.stroke();
+    g.strokeStyle = rgba(a, 0.7);
+    g.beginPath(); g.moveTo(-4, 0); g.lineTo(-11, -0.5 + f * 0.8); g.moveTo(4, 0); g.lineTo(11, -0.5 + f * 0.8); g.stroke();
+    g.fillStyle = rg(g, -0.8, 0, 0.3, 0, 1, 4, [0, '#ffffff', 0.35, a, 1, mixHex(a, '#000000', 0.4)]); dot(g, 0, 1, 3.6);
+    g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = 0.6; g.beginPath(); g.arc(0, 1, 3.6, 0, TAU); g.stroke();
+    g.fillStyle = a; dot(g, -9, 1 + f * 0.4, 1.2); dot(g, 9, 1 + f * 0.4, 1.2);
+  },
+  player: function (g, k, P) {          // fighter, nose up
+    var m = P[0], a = P[1], hi = P[2];
+    g.beginPath();
+    g.moveTo(-4, -1); g.lineTo(-12, 7); g.lineTo(-12, 9.5); g.lineTo(-4, 8); g.closePath();
+    g.moveTo(4, -1); g.lineTo(12, 7); g.lineTo(12, 9.5); g.lineTo(4, 8); g.closePath();
+    g.fillStyle = lg(g, 0, -1, 0, 10, [0, mixHex(m, '#ffffff', 0.2), 1, mixHex(m, '#000000', 0.5)]); g.fill();
+    g.strokeStyle = rgba(a, 0.7); g.lineWidth = 0.7; g.stroke();
+    g.beginPath(); g.moveTo(0, -12);
+    g.bezierCurveTo(3, -8, 4.5, -2, 5, 5); g.lineTo(3, 10); g.lineTo(-3, 10); g.lineTo(-5, 5);
+    g.bezierCurveTo(-4.5, -2, -3, -8, 0, -12); g.closePath();
+    g.fillStyle = lg(g, -5, 0, 5, 0, [0, mixHex(m, '#000000', 0.35), 0.45, hi, 0.55, mixHex(m, '#ffffff', 0.3), 1, mixHex(m, '#000000', 0.45)]);
+    g.fill(); g.strokeStyle = rgba(hi, 0.5); g.lineWidth = 0.6; g.stroke();
+    g.fillStyle = rg(g, -0.6, -4, 0.2, 0, -3, 4.5, [0, '#ffffff', 0.4, a, 1, mixHex(a, '#001030', 0.6)]);
+    g.beginPath(); g.ellipse(0, -3, 1.9, 4, 0, 0, TAU); g.fill();
+    g.fillStyle = a; dot(g, -12, 8.2, 1.2); dot(g, 12, 8.2, 1.2);
+    g.fillStyle = '#0d1730'; g.fillRect(-2.6, 8.5, 2, 2); g.fillRect(0.6, 8.5, 2, 2);
+  }
+};
+function shapeFn(name, k, P) { return function (g) { SHAPES[name](g, k, P); }; }
+function tiltFn(a, P) { return function (g) { g.save(); g.rotate(a); SHAPES.player(g, 0, P); g.restore(); }; }
+
+var FLAP = [0, 1, 2, 3, 2, 1];            // ping-pong over 4 baked wing frames
+var SHIP_KEYS = ['basic', 'mid', 'escort', 'flagship'];
+var SHIP_SIZES = [[26, 22], [26, 26], [28, 22], [30, 26]];
+// Enemy atlas: ONE canvas holding every enemy, every wing frame and ROT pre-rotated headings,
+// so drawing an enemy is always a plain axis-aligned copy from the same image (no rotate, batches well).
+var ROT = 20, CELL = 46, CPT = 4 + (ROT - 1) * 2, ATLAS_COLS = 16, GLOW_PAD = 4;
+
+var Sprites = {
+  ready: false, scale: 1, cache: {}, flame: null, laser: null, orb: null, bg: null,
+  glowCache: {}, ringCache: {},
+  atlas: null, cpx: 1,
+  build: function (S) {
+    S = clamp(S, 1, 3); this.scale = S;
+    this.cache = {};
+    this.buildAtlas(S);
+    var PP = CONFIG.palettes[4];
+    var pl = [];
+    for (var ti = -2; ti <= 2; ti++) pl.push(bake(28, 26, 6, S, tiltFn(ti * 0.1, PP), rgba(PP[0], 0.8), 5));
+    this.cache[4] = pl;
+    this.flame = bake(8, 18, 3, S, function (g) {
+      g.fillStyle = lg(g, 0, -9, 0, 9, [0, '#ffffff', 0.25, PP[1], 1, rgba(PP[1], 0)]);
+      g.beginPath(); g.moveTo(-3, -9); g.quadraticCurveTo(-3.5, 0, 0, 9); g.quadraticCurveTo(3.5, 0, 3, -9); g.closePath(); g.fill();
+    }, rgba(PP[1], 0.9), 4);
+    var pb = CONFIG.colors.playerBullet, eb = CONFIG.colors.enemyBullet;
+    this.laser = bake(4, 16, 5, S, function (g) {
+      g.fillStyle = lg(g, 0, -8, 0, 8, [0, '#ffffff', 0.5, pb, 1, rgba(pb, 0.15)]);
+      g.beginPath(); g.ellipse(0, -0.5, 1.6, 7.5, 0, 0, TAU); g.fill();
+    }, pb, 6);
+    this.orb = bake(8, 8, 5, S, function (g) {
+      g.fillStyle = rg(g, -0.8, -0.8, 0.2, 0, 0, 3.6, [0, '#ffffff', 0.35, '#ffd27a', 0.7, eb, 1, mixHex(eb, '#5a0000', 0.5)]);
+      dot(g, 0, 0, 3.4);
+    }, eb, 7);
+    TextCache.clear();
     this.ready = true;
   },
+  // Background (gradient + nebula + dust) baked ONCE at the canvas's exact device resolution, so each
+  // frame it is a single unscaled copy - the cheapest possible full-screen operation.
+  buildBackground: function (cw, ch) {
+    var c = makeCanvas(cw, ch), g = c.getContext('2d'), i, C = CONFIG.colors;
+    g.setTransform(cw / W, 0, 0, ch / H, 0, 0);
+    g.fillStyle = lg(g, 0, 0, 0, H, [0, C.bgTop, 0.55, C.bgMid, 1, C.bgBottom]);
+    g.fillRect(0, 0, W, H);
+    if (CONFIG.fx.nebula) {
+      var blobs = [[70, 120, 170, '#5b3cff', 0.17], [300, 260, 190, '#ff3d9a', 0.09], [120, 430, 210, '#1f8bff', 0.13],
+                   [280, 560, 160, '#8a2be2', 0.12], [200, 20, 140, '#00c2ff', 0.07], [30, 330, 120, '#ff7a3d', 0.05]];
+      for (i = 0; i < blobs.length; i++) {
+        var b = blobs[i];
+        g.fillStyle = rg(g, b[0], b[1], 0, b[0], b[1], b[2], [0, rgba(b[3], b[4]), 0.5, rgba(b[3], b[4] * 0.45), 1, rgba(b[3], 0)]);
+        g.fillRect(b[0] - b[2], b[1] - b[2], b[2] * 2, b[2] * 2);
+      }
+    }
+    var seed = 7; // deterministic faint dust
+    for (i = 0; i < 220; i++) {
+      seed = (seed * 16807) % 2147483647; var x = (seed % 3600) / 10;
+      seed = (seed * 16807) % 2147483647; var y = (seed % 6400) / 10;
+      seed = (seed * 16807) % 2147483647;
+      g.fillStyle = 'rgba(200,210,255,' + (0.05 + (seed % 100) / 1000) + ')';
+      g.fillRect(x, y, 0.8, 0.8);
+    }
+    this.bg = c;
+  },
+  // Soft additive glow dot (fixed 48 px texture, any colour). Used for particles, stars, trails, flashes.
+  glow: function (color) {
+    var t = this.glowCache[color]; if (t) return t;
+    var c = makeCanvas(48, 48), g = c.getContext('2d');
+    g.fillStyle = rg(g, 24, 24, 0, 24, 24, 24, [0, 'rgba(255,255,255,1)', 0.18, rgba(color, 0.95), 0.5, rgba(color, 0.3), 1, rgba(color, 0)]);
+    g.fillRect(0, 0, 48, 48);
+    return (this.glowCache[color] = c);
+  },
+  // Glowing ring texture (radius 38 in a 96 px canvas) for shockwaves and the shield.
+  ring: function (color) {
+    var t = this.ringCache[color]; if (t) return t;
+    var c = makeCanvas(96, 96), g = c.getContext('2d');
+    g.shadowColor = color; g.shadowBlur = 8; g.strokeStyle = rgba(color, 0.9); g.lineWidth = 5;
+    g.beginPath(); g.arc(48, 48, 38, 0, TAU); g.stroke();
+    g.shadowBlur = 0; g.strokeStyle = 'rgba(255,255,255,0.75)'; g.lineWidth = 1.5; g.stroke();
+    return (this.ringCache[color] = c);
+  },
+  buildAtlas: function (S) {
+    var cpx = Math.ceil(CELL * S), rows = Math.ceil(4 * CPT / ATLAS_COLS);
+    var c = makeCanvas(ATLAS_COLS * cpx, rows * cpx), g = c.getContext('2d');
+    for (var ti = 0; ti < 4; ti++) {
+      var P = CONFIG.palettes[ti], glow = rgba(P[0], 0.85);
+      for (var ci = 0; ci < CPT; ci++) {
+        var ang = 0, k = ci / 3;
+        if (ci >= 4) { ang = (1 + ((ci - 4) >> 1)) / ROT * TAU; k = ((ci - 4) & 1) ? 0.85 : 0.15; }
+        var idx = ti * CPT + ci, ox = (idx % ATLAS_COLS) * cpx, oy = Math.floor(idx / ATLAS_COLS) * cpx;
+        var draw = shapeFn(SHIP_KEYS[ti], k, P);
+        g.save();
+        g.setTransform(1, 0, 0, 1, 0, 0); g.beginPath(); g.rect(ox, oy, cpx, cpx); g.clip();
+        g.setTransform(S, 0, 0, S, ox + cpx / 2, oy + cpx / 2); g.rotate(ang);
+        g.shadowColor = glow; g.shadowBlur = 3.5 * S; draw(g);
+        g.shadowBlur = 0; g.shadowColor = 'rgba(0,0,0,0)'; draw(g);
+        g.restore();
+      }
+    }
+    this.atlas = c; this.cpx = cpx;
+  },
+  // cell: 0..3 = upright wing frames; 4.. = pre-rotated headings (2 wing frames each)
+  exact: false,   // true when the canvas scale equals the baked scale -> snap to whole device pixels
+  drawShip: function (ctx, type, cell, x, y, scale) {
+    var idx = type * CPT + cell, cpx = this.cpx, k = scale || 1, S = this.scale, sw, sh;
+    var ox = (idx % ATLAS_COLS) * cpx, oy = Math.floor(idx / ATLAS_COLS) * cpx;
+    if (cell < 4) {   // upright: copy only the tight box around the ship (less fill)
+      sw = Math.round((SHIP_SIZES[type][0] + GLOW_PAD * 2) * S); sh = Math.round((SHIP_SIZES[type][1] + GLOW_PAD * 2) * S);
+      ox += (cpx - sw) >> 1; oy += (cpx - sh) >> 1;
+    } else { sw = sh = cpx; }
+    var dw = sw / S * k, dh = sh / S * k, dx = x - dw / 2, dy = y - dh / 2;
+    if (k === 1 && this.exact) { dx = Math.round(dx * S) / S; dy = Math.round(dy * S) / S; }
+    ctx.drawImage(this.atlas, ox, oy, sw, sh, dx, dy, dw, dh);
+  },
   draw: function (ctx, type, frame, x, y, scale) {
+    if (type < 4) { this.drawShip(ctx, type, frame, x, y, scale); return; }
     var list = this.cache[type]; if (!list) return;
     var s = list[frame % list.length], k = scale || 1;
     ctx.drawImage(s.c, x - s.w * k / 2, y - s.h * k / 2, s.w * k, s.h * k);
   }
 };
+var RING_K = 48 / 38;   // ring texture half-size per unit radius
+
+// Text baked with glow / gradient fill (titles, banners). Cached by content+style; cleared on rescale.
+var TextCache = {
+  map: {}, n: 0, mctx: null,
+  clear: function () { this.map = {}; this.n = 0; },
+  get: function (str, size, fill, glow, weight, style, spacing) {
+    var key = str + '|' + size + '|' + fill + '|' + glow + '|' + weight + '|' + style + '|' + spacing;
+    var hit = this.map[key]; if (hit) return hit;
+    if (this.n > 48) this.clear();
+    var S = Sprites.scale, font = (style ? style + ' ' : '') + (weight || '800') + ' ' + size + 'px ' + FONT_UI;
+    var m = this.mctx || (this.mctx = makeCanvas(4, 4).getContext('2d'));
+    m.font = font;
+    var ls = !!spacing && ('letterSpacing' in m);
+    if (ls) m.letterSpacing = spacing + 'px';
+    var tw = m.measureText(str).width;
+    if (ls) m.letterSpacing = '0px';
+    var pad = glow ? Math.ceil(size * 0.5) + 2 : 2;
+    var w = Math.ceil(tw) + pad * 2 + (style ? Math.ceil(size * 0.2) : 0), h = Math.ceil(size * 1.3) + pad * 2;
+    var c = makeCanvas(w * S, h * S), g = c.getContext('2d');
+    g.setTransform(S, 0, 0, S, 0, 0); g.font = font;
+    if (ls) g.letterSpacing = spacing + 'px';
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    var fs = fill;
+    if (typeof fill !== 'string') {
+      fs = g.createLinearGradient(0, pad, 0, h - pad);
+      for (var i = 0; i < fill.length; i++) fs.addColorStop(i / (fill.length - 1), fill[i]);
+    }
+    g.fillStyle = fs;
+    var cx = w / 2 + (ls ? spacing / 2 : 0), cy = h / 2;
+    if (glow) { g.shadowColor = glow; g.shadowBlur = size * 0.45 * S; g.fillText(str, cx, cy); g.shadowBlur = 0; g.shadowColor = 'rgba(0,0,0,0)'; }
+    g.fillText(str, cx, cy);
+    hit = { c: c, w: w, h: h }; this.map[key] = hit; this.n++;
+    return hit;
+  }
+};
 
 /* =====================================================================
- * Entities - player, enemies, bullet / particle pools, starfield
+ * Entities - player, enemies, bullet / particle / ring / flash pools, starfield
  * ===================================================================== */
 var reducedMotion = false;
 try { reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { /* ignore */ }
 
-var player = { x: W / 2, alive: true, invuln: 0 };
+var TRAIL_N = 5;
+var player = { x: W / 2, alive: true, invuln: 0, tilt: 0 };
 var pBullet = { active: false, x: 0, y: 0 };
-var eBullets = [], particles = [], popups = [], stars = [], enemies = [];
+var eBullets = [], particles = [], popups = [], rings = [], flashes = [], stars = [], enemies = [];
 var tmpP = { x: 0, y: 0 };
 
 function initPools() {
   var i;
   for (i = 0; i < CONFIG.enemyBulletPool; i++) eBullets.push({ active: false, x: 0, y: 0, vx: 0, vy: 0 });
-  for (i = 0; i < CONFIG.particles; i++) particles.push({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 1, color: '#fff', size: 2 });
+  for (i = 0; i < CONFIG.particles; i++) particles.push({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 1, color: '#ffffff', size: 2 });
   for (i = 0; i < CONFIG.popups; i++) popups.push({ active: false, x: 0, y: 0, t: 0, text: '' });
-  for (i = 0; i < CONFIG.stars; i++) {
+  for (i = 0; i < CONFIG.rings; i++) rings.push({ active: false, x: 0, y: 0, t: 0, dur: 1, r0: 0, r1: 1, color: '#ffffff' });
+  for (i = 0; i < CONFIG.flashes; i++) flashes.push({ active: false, x: 0, y: 0, t: 0, dur: 1, size: 1, color: '#ffffff' });
+  for (i = 0; i < CONFIG.fx.starCount; i++) {
     var z = i % 3;
-    stars.push({ x: rand(0, W), y: rand(0, H), z: z, speed: [18, 42, 85][z], size: z === 2 ? 2 : 1, a: [0.35, 0.6, 0.95][z] });
+    stars.push({ x: rand(0, W), y: rand(0, H), z: z, speed: [14, 34, 72][z], r: [1.8, 2.4, 3.0][z],
+                 a: [0.45, 0.7, 0.9][z], f: rand(1, 3), p: rand(0, TAU) });
   }
 }
 function spawnBurst(x, y, color, n, speed) {
-  if (reducedMotion) n = Math.ceil(n / 2);
+  if (reducedMotion || Quality.low) n = Math.ceil(n / 2);
   for (var i = 0; i < particles.length && n > 0; i++) {
     var p = particles[i]; if (p.active) continue;
-    var a = Math.random() * 6.2832, v = rand(speed * 0.3, speed);
+    var a = Math.random() * TAU, v = rand(speed * 0.3, speed);
     p.active = true; p.x = x; p.y = y; p.vx = Math.cos(a) * v; p.vy = Math.sin(a) * v;
-    p.max = p.life = rand(0.35, 0.8); p.color = color; p.size = Math.random() < 0.3 ? 3 : 2;
+    p.max = p.life = rand(0.35, 0.85); p.color = color; p.size = rand(1.5, 3.5);
     n--;
+  }
+}
+function spawnRing(x, y, color, r0, r1, dur) {
+  for (var i = 0; i < rings.length; i++) {
+    var r = rings[i]; if (r.active) continue;
+    r.active = true; r.x = x; r.y = y; r.t = 0; r.dur = dur; r.r0 = r0; r.r1 = r1; r.color = color; return;
+  }
+}
+function spawnFlash(x, y, color, size, dur) {
+  for (var i = 0; i < flashes.length; i++) {
+    var f = flashes[i]; if (f.active) continue;
+    f.active = true; f.x = x; f.y = y; f.t = 0; f.dur = dur; f.size = size; f.color = color; return;
   }
 }
 function spawnPopup(x, y, text) {
@@ -626,7 +881,9 @@ function makeEnemy(type, row, col, order) {
     delay: 0.2 + order * F.enterStagger, t: 0, dur: F.enterDur,
     pa: [side > 0 ? W + 15 : -15, -25, W / 2 + side * 120, 360, baseX - side * 90, baseY + 130],
     path: null, s: 0, speed: 0, fireCd: 0, params: null,
-    escorts: null, escortsLaunched: 0, phase: Math.random() * 4
+    escorts: null, escortsLaunched: 0, phase: Math.random() * 4,
+    // visual-only state
+    ang: 0, lx: baseX, ly: -40, trail: new Float32Array(TRAIL_N * 2), tn: 0, th: 0, tt: 0
   };
 }
 function buildFormation() {
@@ -751,6 +1008,30 @@ function updateEnemies(dt) {
   }
 }
 
+/* Visual-only updates: ship heading (enemies turn along their flight path), dive trails, player banking. */
+function updateVisuals(dt) {
+  var k = Math.min(1, dt * 10), i;
+  player.tilt += ((player.alive ? Input.dir * 0.2 : 0) - player.tilt) * Math.min(1, dt * 12);
+  for (i = 0; i < enemies.length; i++) {
+    var e = enemies[i]; if (!e.alive) continue;
+    var dx = e.x - e.lx, dy = e.y - e.ly, d2 = dx * dx + dy * dy;
+    e.lx = e.x; e.ly = e.y;
+    var moving = e.visible && e.state !== 'inFormation' && !(e.state === 'diving' && e.delay > 0);
+    if (d2 > 3600) { e.tn = 0; continue; }          // teleported (wrap to top): no turn, no trail
+    var target = 0;
+    if (moving) target = (dt > 0 && d2 > (20 * dt) * (20 * dt)) ? Math.atan2(-dx, dy) : e.ang;
+    e.ang += wrapAngle(target - e.ang) * k;
+    e.tt -= dt;
+    if (e.tt <= 0) {
+      e.tt = 0.035;
+      if (moving && e.state !== 'entering') {
+        e.trail[e.th * 2] = e.x; e.trail[e.th * 2 + 1] = e.y;
+        e.th = (e.th + 1) % TRAIL_N; if (e.tn < TRAIL_N) e.tn++;
+      } else if (e.tn > 0) e.tn--;
+    }
+  }
+}
+
 /* =====================================================================
  * Game - state machine, scoring, lives, waves
  *   states: title, playing, waveIntro, playerDying, paused, gameOver
@@ -761,24 +1042,24 @@ var G = {
   time: 0, sway: 0, formTime: 0, alive: 0,
   introT: 0, deathT: 0, gameOverT: 0, diveT: 1, waveEndT: 0,
   diff: difficulty(1),
-  banner: { text: '', t: 0, dur: 0 },
+  banner: { text: '', sub: '', t: 0, dur: 0 },
   shake: 0, flash: 0, skipDt: false
 };
 
-function setBanner(text) { G.banner.text = text; G.banner.t = 0; G.banner.dur = CONFIG.timing.bannerDur; }
+function setBanner(text, sub) { G.banner.text = text; G.banner.sub = sub || ''; G.banner.t = 0; G.banner.dur = CONFIG.timing.bannerDur; }
 function saveHi() { if (G.hi > 0) Storage.set('hi', G.hi); }
 
 function addScore(n) {
   G.score += n;
   if (G.score > G.hi) { G.hi = G.score; G.newHigh = true; }
   if (!G.extraGiven && G.score >= CONFIG.player.extraLifeScore) {
-    G.extraGiven = true; G.lives++; setBanner('EXTRA LIFE!'); Audio_.extraLife();
+    G.extraGiven = true; G.lives++; setBanner('EXTRA LIFE!', ''); Audio_.extraLife();
   }
 }
 
 function newGame() {
   G.score = 0; G.lives = CONFIG.player.lives; G.wave = 1; G.extraGiven = false; G.newHigh = false;
-  player.x = W / 2; player.alive = true; player.invuln = 0;
+  player.x = W / 2; player.alive = true; player.invuln = 0; player.tilt = 0;
   pBullet.active = false; clearEnemyBullets();
   startWave();
 }
@@ -787,7 +1068,7 @@ function startWave() {
   clearEnemyBullets(); pBullet.active = false;
   buildFormation();
   G.state = 'waveIntro'; G.introT = 0; G.diveT = 1.2; G.waveEndT = 0;
-  setBanner('WAVE ' + G.wave); Audio_.waveStart();
+  setBanner('WAVE ' + G.wave, 'GET READY'); Audio_.waveStart();
 }
 
 function killEnemy(e, byRam) {
@@ -799,17 +1080,25 @@ function killEnemy(e, byRam) {
   var pts = pointsFor(e.type, diving, launched, alive);
   e.alive = false; G.alive--;
   addScore(pts);
-  spawnBurst(e.x, e.y, CONFIG.palettes[e.type][0], 12, 130);
-  spawnBurst(e.x, e.y, CONFIG.palettes[e.type][1], 5, 90);
+  var pal = CONFIG.palettes[e.type];
+  spawnBurst(e.x, e.y, pal[0], 10, 140);
+  spawnBurst(e.x, e.y, pal[1], 5, 100);
+  spawnBurst(e.x, e.y, '#ffffff', 3, 60);
+  spawnRing(e.x, e.y, pal[1], 3, e.type === 3 ? 34 : 24, 0.35);
+  spawnFlash(e.x, e.y, pal[2], 18, 0.16);
   Audio_.enemyHit();
   if (pts >= 200) spawnPopup(e.x, e.y, String(pts));
 }
 
 function killPlayer() {
   G.lives--; player.alive = false; pBullet.active = false; clearEnemyBullets();
-  spawnBurst(player.x, CONFIG.player.y, '#39ff88', 26, 190);
-  spawnBurst(player.x, CONFIG.player.y, '#ffffff', 14, 140);
-  spawnBurst(player.x, CONFIG.player.y, '#ff9a3b', 14, 220);
+  var py = CONFIG.player.y, pp = CONFIG.palettes[4];
+  spawnBurst(player.x, py, pp[0], 20, 190);
+  spawnBurst(player.x, py, '#ffffff', 10, 140);
+  spawnBurst(player.x, py, '#ff9a3b', 10, 220);
+  spawnRing(player.x, py, pp[1], 6, 70, 0.6);
+  spawnRing(player.x, py, '#ffffff', 4, 40, 0.45);
+  spawnFlash(player.x, py, '#ffffff', reducedMotion ? 26 : 46, 0.25);
   Audio_.playerHit();
   if (!reducedMotion) { G.shake = 0.35; G.flash = 0.18; }
   for (var i = 0; i < enemies.length; i++) {
@@ -826,7 +1115,7 @@ function enterGameOver() {
 }
 
 function respawnPlayer() {
-  player.x = W / 2; player.alive = true; player.invuln = CONFIG.player.invuln;
+  player.x = W / 2; player.alive = true; player.invuln = CONFIG.player.invuln; player.tilt = 0;
   clearEnemyBullets();
   G.state = 'playing'; G.diveT = 1.5;
 }
@@ -835,7 +1124,7 @@ function updateStars(dt) {
   var k = reducedMotion ? 0.3 : 1;
   for (var i = 0; i < stars.length; i++) {
     var s = stars[i]; s.y += s.speed * dt * k;
-    if (s.y > H) { s.y -= H; s.x = rand(0, W); }
+    if (s.y > H + 6) { s.y -= H + 12; s.x = rand(0, W); }
   }
 }
 function updateEffects(dt) {
@@ -843,8 +1132,10 @@ function updateEffects(dt) {
   for (i = 0; i < particles.length; i++) {
     var p = particles[i]; if (!p.active) continue;
     p.life -= dt; if (p.life <= 0) { p.active = false; continue; }
-    p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.98; p.vy *= 0.98;
+    p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.97; p.vy *= 0.97;
   }
+  for (i = 0; i < rings.length; i++) { var r = rings[i]; if (r.active && (r.t += dt) >= r.dur) r.active = false; }
+  for (i = 0; i < flashes.length; i++) { var f = flashes[i]; if (f.active && (f.t += dt) >= f.dur) f.active = false; }
   for (i = 0; i < popups.length; i++) {
     var q = popups[i]; if (!q.active) continue;
     q.t += dt; q.y -= 18 * dt; if (q.t > 0.9) q.active = false;
@@ -911,6 +1202,7 @@ function simulate(dt) {
   updateStars(dt); updateEffects(dt);
   updatePlayerAndBullets(dt);
   updateEnemies(dt);
+  updateVisuals(dt);
 }
 
 function update(dt) {
@@ -976,142 +1268,256 @@ function toggleMute() { Audio_.setMuted(!Audio_.muted); syncButtons(); }
 
 var btnPause, btnMute;
 function syncButtons() {
-  btnPause.textContent = (G.state === 'paused') ? '\u25B6' : 'II';
+  btnPause.classList.toggle('alt', G.state === 'paused');
+  btnMute.classList.toggle('alt', Audio_.muted);
   btnMute.classList.toggle('off', Audio_.muted);
   btnMute.setAttribute('aria-pressed', Audio_.muted ? 'true' : 'false');
 }
 
 /* =====================================================================
- * Rendering (the only place scale is applied)
+ * Rendering (the only place scale is applied). Only drawImage of baked sprites + a few fills/texts.
  * ===================================================================== */
 var ctx;
-function text(s, x, y, size, color, align) {
-  ctx.font = 'bold ' + size + 'px ' + FONT;
-  ctx.textAlign = align || 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = color;
-  ctx.fillText(s, x, y);
+function textOn(g, s, x, y, size, color, align, font, weight) {
+  g.font = (weight || 'bold') + ' ' + size + 'px ' + (font || FONT_UI);
+  g.textAlign = align || 'center'; g.textBaseline = 'middle'; g.fillStyle = color;
+  g.fillText(s, x, y);
 }
-function drawStars() {
-  for (var i = 0; i < stars.length; i++) {
-    var s = stars[i]; ctx.globalAlpha = s.a; ctx.fillStyle = '#cfe3ff';
-    ctx.fillRect(s.x, s.y, s.size, s.size);
+function text(s, x, y, size, color, align, font, weight) { textOn(ctx, s, x, y, size, color, align, font, weight); }
+function drawTextSprite(T, x, y, s, a) {
+  s = s || 1; ctx.globalAlpha = (a == null) ? 1 : a;
+  ctx.drawImage(T.c, x - T.w * s / 2, y - T.h * s / 2, T.w * s, T.h * s);
+  ctx.globalAlpha = 1;
+}
+function drawBackground() {
+  var cv = Display.canvas;
+  if (!Sprites.bg || Sprites.bg.width !== cv.width || Sprites.bg.height !== cv.height) Sprites.buildBackground(cv.width, cv.height);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.drawImage(Sprites.bg, 0, 0);
+}
+function drawStars() {     // additive. Far + mid layers: ONE path fill each. Near layer: glow sprites.
+  var t = G.time, i, s, z;
+  for (z = 0; z < 2; z++) {
+    ctx.globalAlpha = reducedMotion ? (z ? 0.75 : 0.5) : (z ? 0.6 + 0.2 * Math.sin(t * 1.7) : 0.4 + 0.15 * Math.sin(t * 1.3 + 2));
+    ctx.fillStyle = z ? '#ffffff' : '#a9c4ff';
+    var sz = z ? 1.4 : 1;
+    ctx.beginPath();
+    for (i = 0; i < stars.length; i++) { s = stars[i]; if (s.z === z) ctx.rect(s.x, s.y, sz, sz); }
+    ctx.fill();
+  }
+  var tex = Sprites.glow('#ffffff');
+  for (i = 0; i < stars.length; i++) {
+    s = stars[i]; if (s.z !== 2) continue;
+    var r = s.r;
+    ctx.globalAlpha = s.a * (reducedMotion ? 1 : 0.65 + 0.35 * Math.sin(t * s.f + s.p));
+    ctx.drawImage(tex, s.x - r, s.y - r * 1.3, r * 2, r * 2.6);
+  }
+  ctx.globalAlpha = 1;
+}
+function drawTrails() {    // additive
+  if (Quality.low || !CONFIG.fx.trails) return;
+  for (var i = 0; i < enemies.length; i++) {
+    var e = enemies[i]; if (!e.alive || !e.visible || e.tn < 2) continue;
+    var tex = Sprites.glow(CONFIG.palettes[e.type][0]);
+    for (var j = 1; j < e.tn; j++) {
+      var idx = (e.th - 1 - j + TRAIL_N * 2) % TRAIL_N, f = 1 - j / TRAIL_N, r = 2 + 6 * f;
+      ctx.globalAlpha = 0.5 * f;
+      ctx.drawImage(tex, e.trail[idx * 2] - r, e.trail[idx * 2 + 1] - r, r * 2, r * 2);
+    }
   }
   ctx.globalAlpha = 1;
 }
 function drawEnemies() {
-  var frameBase = Math.floor(G.time * 3);
+  var t = G.time;
   for (var i = 0; i < enemies.length; i++) {
     var e = enemies[i]; if (!e.alive || !e.visible) continue;
-    var frame = (e.state === 'inFormation') ? (frameBase + (e.col & 1)) & 1 : (Math.floor(G.time * 8 + e.phase) & 1);
-    Sprites.draw(ctx, e.type, frame, e.x, e.y, 1);
+    var fr = (e.state === 'inFormation') ? FLAP[Math.floor(t * 8 + e.col * 0.6) % 6] : FLAP[Math.floor(t * 14 + e.phase * 3) % 6];
+    var ai = Math.round(e.ang / TAU * ROT); ai = ((ai % ROT) + ROT) % ROT;
+    Sprites.drawShip(ctx, e.type, ai === 0 ? fr : 4 + (ai - 1) * 2 + (fr >= 2 ? 1 : 0), e.x, e.y, 1);
+  }
+}
+function drawBullets() {   // additive
+  var i, b, o = Sprites.orb;
+  for (i = 0; i < eBullets.length; i++) {
+    b = eBullets[i]; if (!b.active) continue;
+    ctx.drawImage(o.c, b.x - o.w / 2, b.y - o.h / 2, o.w, o.h);
+  }
+  if (pBullet.active) {
+    var L = Sprites.laser;
+    ctx.drawImage(L.c, pBullet.x - L.w / 2, pBullet.y - L.h / 2, L.w, L.h);
   }
 }
 function drawPlayer() {
   if (!player.alive) return;
+  var y = CONFIG.player.y, a = 1;
+  if (player.invuln > 0) a = reducedMotion ? 0.6 : (Math.floor(G.time * 12) % 2 === 0 ? 0.3 : 1);
+  var ti = clamp(Math.round(player.tilt / 0.1), -2, 2), x = player.x;
+  ctx.globalCompositeOperation = 'lighter';
+  var F = Sprites.flame, fl = reducedMotion ? 1 : 0.8 + Math.random() * 0.4;
+  ctx.globalAlpha = a; ctx.drawImage(F.c, x - ti - F.w / 2, y + 7, F.w, F.h * fl);
   if (player.invuln > 0) {
-    if (reducedMotion) ctx.globalAlpha = 0.5;
-    else if (Math.floor(G.time * 12) % 2 === 0) return;
+    var R = Sprites.ring(CONFIG.palettes[4][1]), rr = 17 * RING_K;
+    ctx.globalAlpha = reducedMotion ? 0.4 : 0.3 + 0.2 * Math.sin(G.time * 10);
+    ctx.drawImage(R, x - rr, y - rr, rr * 2, rr * 2);
   }
-  Sprites.draw(ctx, 4, 0, player.x, CONFIG.player.y, 1);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = a; Sprites.draw(ctx, 4, ti + 2, x, y, 1);
   ctx.globalAlpha = 1;
 }
-function drawBullets() {
-  var i;
-  if (pBullet.active) {
-    ctx.fillStyle = CONFIG.colors.playerBullet;
-    ctx.fillRect(pBullet.x - 1.5, pBullet.y - 5, 3, 10);
+function drawEffects() {   // additive
+  var i, q;
+  for (i = 0; i < rings.length; i++) {
+    var r = rings[i]; if (!r.active) continue;
+    q = r.t / r.dur; var rad = lerp(r.r0, r.r1, easeOut(q)) * RING_K;
+    ctx.globalAlpha = 1 - q;
+    ctx.drawImage(Sprites.ring(r.color), r.x - rad, r.y - rad, rad * 2, rad * 2);
   }
-  ctx.fillStyle = CONFIG.colors.enemyBullet;
-  for (i = 0; i < eBullets.length; i++) {
-    var b = eBullets[i]; if (!b.active) continue;
-    ctx.fillRect(b.x - 2, b.y - 4, 4, 9);
-    ctx.fillStyle = '#ffe14a'; ctx.fillRect(b.x - 1, b.y - 2, 2, 4); ctx.fillStyle = CONFIG.colors.enemyBullet;
+  for (i = 0; i < flashes.length; i++) {
+    var f = flashes[i]; if (!f.active) continue;
+    q = f.t / f.dur; var sz = f.size * (0.6 + 0.4 * q);
+    ctx.globalAlpha = 1 - q;
+    ctx.drawImage(Sprites.glow(f.color), f.x - sz, f.y - sz, sz * 2, sz * 2);
   }
-}
-function drawEffects() {
-  var i;
   for (i = 0; i < particles.length; i++) {
     var p = particles[i]; if (!p.active) continue;
-    ctx.globalAlpha = clamp(p.life / p.max, 0, 1); ctx.fillStyle = p.color;
-    ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+    var k = p.life / p.max, s = p.size * (1.2 + k);
+    ctx.globalAlpha = k;
+    ctx.drawImage(Sprites.glow(p.color), p.x - s, p.y - s, s * 2, s * 2);
   }
   ctx.globalAlpha = 1;
-  for (i = 0; i < popups.length; i++) {
+}
+function drawPopups() {
+  for (var i = 0; i < popups.length; i++) {
     var q = popups[i]; if (!q.active) continue;
     ctx.globalAlpha = clamp(1 - q.t / 0.9, 0, 1);
-    text(q.text, q.x, q.y, 14, CONFIG.colors.accent);
+    text(q.text, q.x, q.y, 13, CONFIG.colors.accent, 'center', FONT_MONO, 'bold');
   }
   ctx.globalAlpha = 1;
 }
-function drawHud() {
-  text('SCORE ' + padScore(G.score), 8, 16, 14, CONFIG.colors.text, 'left');
-  text('HI ' + padScore(G.hi), W - 8, 16, 14, CONFIG.colors.accent, 'right');
-  // lives (bottom-left) and wave (bottom-right)
-  var shown = Math.min(G.lives, 5), i;
-  for (i = 0; i < shown; i++) Sprites.draw(ctx, 4, 0, 18 + i * 22, H - 16, 0.7);
-  if (G.lives > 5) text('+' + (G.lives - 5), 18 + 5 * 22 - 4, H - 16, 12, CONFIG.colors.text, 'left');
-  text('WAVE ' + G.wave, W - 8, H - 16, 14, CONFIG.colors.cool, 'right');
-}
+var HUD_H = 40;
+var Hud = {
+  top: null, bot: null, key: '',
+  draw: function () {
+    var K = Display.canvas.width / W, key = G.score + '|' + G.hi + '|' + G.lives + '|' + G.wave + '|' + K + '|' + Sprites.scale;
+    if (key !== this.key || !this.top) { this.key = key; this.render(K); }
+    ctx.drawImage(this.top, 0, 0, W, HUD_H);
+    ctx.drawImage(this.bot, 0, H - HUD_H, W, HUD_H);
+  },
+  render: function (K) {
+    var cw = Math.round(W * K), ch = Math.round(HUD_H * K), C = CONFIG.colors;
+    if (!this.top || this.top.width !== cw || this.top.height !== ch) { this.top = makeCanvas(cw, ch); this.bot = makeCanvas(cw, ch); }
+    var g = this.top.getContext('2d');
+    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cw, ch); g.setTransform(K, 0, 0, K, 0, 0);
+    textOn(g, 'SCORE', 12, 13, 9, C.dim, 'left', FONT_UI, '800');
+    textOn(g, padScore(G.score), 12, 28, 17, C.text, 'left', FONT_MONO, 'bold');
+    textOn(g, 'HI SCORE', W - 12, 13, 9, C.dim, 'right', FONT_UI, '800');
+    textOn(g, padScore(G.hi), W - 12, 28, 17, C.accent, 'right', FONT_MONO, 'bold');
+    g = this.bot.getContext('2d');
+    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cw, ch); g.setTransform(K, 0, 0, K, 0, -(H - HUD_H) * K);
+    var shown = Math.min(G.lives, 5), i;
+    for (i = 0; i < shown; i++) Sprites.draw(g, 4, 2, 18 + i * 20, H - 18, 0.55);
+    if (G.lives > 5) textOn(g, '+' + (G.lives - 5), 18 + 5 * 20 - 6, H - 18, 12, C.text, 'left', FONT_UI, '800');
+    var label = 'WAVE ' + G.wave;
+    g.font = '800 11px ' + FONT_UI;
+    var pw = g.measureText(label).width + 22, x = W - 12 - pw;
+    rrect(g, x, H - 30, pw, 22, 11);
+    g.fillStyle = 'rgba(95,227,255,0.12)'; g.fill();
+    g.strokeStyle = 'rgba(95,227,255,0.55)'; g.lineWidth = 1; g.stroke();
+    textOn(g, label, x + pw / 2, H - 19, 11, C.cool, 'center', FONT_UI, '800');
+  }
+};
+function drawHud() { Hud.draw(); }
 function drawBanner() {
   var b = G.banner;
   if (b.t >= b.dur) return;
   var a = b.t < 0.2 ? b.t / 0.2 : (b.t > b.dur - 0.3 ? (b.dur - b.t) / 0.3 : 1);
-  ctx.globalAlpha = clamp(a, 0, 1);
-  text(b.text, W / 2, 330, 28, CONFIG.colors.accent);
-  ctx.globalAlpha = 1;
+  var pop = (reducedMotion || b.t >= 0.25) ? 1 : 1.35 - 0.35 * easeOut(b.t / 0.25);
+  var T = TextCache.get(b.text, 32, ['#fff6c2', '#ffc93a', '#ff8a3d'], '#ff8a3d', '900', 'italic', 2);
+  drawTextSprite(T, W / 2, 322, pop, clamp(a, 0, 1));
+  if (b.sub) drawTextSprite(TextCache.get(b.sub, 11, '#cfe0ff', null, '800', '', 4), W / 2, 352, 1, clamp(a, 0, 1) * 0.9);
 }
 function startHint() { return Input.isTouch ? 'TAP TO START' : 'PRESS ENTER / CLICK TO START'; }
+function pulse(speed) { return reducedMotion ? 1 : 0.6 + 0.4 * Math.sin(G.time * speed); }
 function drawTitle() {
-  text(CONFIG.TITLE, W / 2 + 2, 122, 36, CONFIG.colors.hot);
-  text(CONFIG.TITLE, W / 2, 120, 36, CONFIG.colors.accent);
-  text('HIGH SCORE ' + padScore(G.hi), W / 2, 168, 14, CONFIG.colors.text);
-  var names = ['BASIC 30 / 60', 'MID-TIER 40 / 80', 'ESCORT 50 / 100', 'FLAGSHIP 60 / 150+'];
-  for (var i = 0; i < 4; i++) {
-    Sprites.draw(ctx, i, Math.floor(G.time * 2) & 1, 70, 220 + i * 32, 1.3);
-    text(names[i], 100, 220 + i * 32, 13, CONFIG.colors.text, 'left');
+  var t = G.time, C = CONFIG.colors, i;
+  drawTextSprite(TextCache.get(CONFIG.TITLE, 44, ['#fff3b0', '#ffc93a', '#ff4f9a'], '#ff4f9a', '900', 'italic', 3), W / 2, 116);
+  drawTextSprite(TextCache.get('DEFEND THE STAR LANES', 11, '#9fb3ff', null, '800', '', 4), W / 2, 158);
+  rrect(ctx, W / 2 - 86, 176, 172, 26, 13);
+  ctx.fillStyle = 'rgba(255,201,58,0.10)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(255,201,58,0.45)'; ctx.lineWidth = 1; ctx.stroke();
+  text('HIGH SCORE  ' + padScore(G.hi), W / 2, 189.5, 12, C.accent, 'center', FONT_MONO, 'bold');
+  rrect(ctx, 44, 220, 272, 158, 16);
+  ctx.fillStyle = 'rgba(120,140,255,0.07)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(140,160,255,0.22)'; ctx.stroke();
+  var names = ['DRONE', 'STINGER', 'CRAB ESCORT', 'FLAGSHIP'], pts = ['30 / 60', '40 / 80', '50 / 100', '60 / 150+'];
+  for (i = 0; i < 4; i++) {
+    var y = 249 + i * 34, bob = reducedMotion ? 0 : Math.sin(t * 2 + i) * 1.5;
+    Sprites.draw(ctx, i, FLAP[Math.floor(t * 8 + i) % 6], 86, y + bob, 1.1);
+    text(names[i], 116, y, 13, C.text, 'left', FONT_UI, '800');
+    text(pts[i], 296, y, 13, mixHex(CONFIG.palettes[i][0], '#ffffff', 0.35), 'right', FONT_MONO, 'bold');
   }
-  text('FLAGSHIP BONUS UP TO 800', W / 2, 360, 12, CONFIG.colors.cool);
-  if (Math.floor(G.time * 2) % 2 === 0) text(startHint(), W / 2, 420, 16, CONFIG.colors.text);
+  text('FLAGSHIP BONUS UP TO 800', W / 2, 402, 11, C.cool, 'center', FONT_UI, '800');
+  drawTextSprite(TextCache.get(startHint(), 15, '#ffffff', '#5fe3ff', '800', '', 1), W / 2, 460, 1, pulse(4));
   if (Input.isTouch) {
-    text('\u25C0 \u25B6 MOVE   FIRE SHOOT', W / 2, 470, 13, '#bbbbbb');
-    text('II PAUSE', W / 2, 492, 13, '#bbbbbb');
+    text('◀ ▶  MOVE      FIRE  SHOOT', W / 2, 506, 12, C.dim, 'center', FONT_UI, '700');
+    text('II  PAUSE', W / 2, 526, 12, C.dim, 'center', FONT_UI, '700');
   } else {
-    text('\u2190 \u2192 OR A D  MOVE', W / 2, 466, 13, '#bbbbbb');
-    text('SPACE FIRE   P PAUSE   M MUTE', W / 2, 488, 13, '#bbbbbb');
+    text('← →  OR  A D   MOVE', W / 2, 506, 12, C.dim, 'center', FONT_UI, '700');
+    text('SPACE FIRE    P PAUSE    M MUTE', W / 2, 526, 12, C.dim, 'center', FONT_UI, '700');
   }
 }
-function drawOverlayDim() { ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(0, 0, W, H); }
+function drawCard(y0, h) {
+  ctx.fillStyle = 'rgba(3,4,14,0.62)'; ctx.fillRect(0, 0, W, H);
+  rrect(ctx, 36, y0, W - 72, h, 18);
+  ctx.fillStyle = 'rgba(22,26,64,0.78)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(150,170,255,0.35)'; ctx.lineWidth = 1; ctx.stroke();
+}
 function drawGameOver() {
-  drawOverlayDim();
-  text('GAME OVER', W / 2, 230, 34, CONFIG.colors.hot);
-  text('SCORE ' + padScore(G.score), W / 2, 290, 18, CONFIG.colors.text);
-  text('HIGH ' + padScore(G.hi), W / 2, 318, 16, CONFIG.colors.accent);
-  if (G.newHigh) text('NEW HIGH SCORE!', W / 2, 360, 20, CONFIG.colors.cool);
-  if (G.gameOverT >= CONFIG.timing.gameOverLock && Math.floor(G.time * 2) % 2 === 0)
-    text(Input.isTouch ? 'TAP TO RESTART' : 'PRESS ENTER / CLICK TO RESTART', W / 2, 430, 16, CONFIG.colors.text);
+  var C = CONFIG.colors;
+  drawCard(190, 260);
+  drawTextSprite(TextCache.get('GAME OVER', 34, ['#ffe0ea', '#ff4f8b'], '#ff2d6f', '900', 'italic', 2), W / 2, 236);
+  text('SCORE', W / 2, 278, 10, C.dim, 'center', FONT_UI, '800');
+  text(padScore(G.score), W / 2, 298, 20, C.text, 'center', FONT_MONO, 'bold');
+  text('HIGH  ' + padScore(G.hi), W / 2, 330, 13, C.accent, 'center', FONT_MONO, 'bold');
+  if (G.newHigh) drawTextSprite(TextCache.get('NEW HIGH SCORE!', 18, ['#e6fbff', '#5fe3ff'], '#2fc8ff', '900', 'italic', 1), W / 2, 368, reducedMotion ? 1 : 1 + 0.04 * Math.sin(G.time * 6));
+  if (G.gameOverT >= CONFIG.timing.gameOverLock)
+    text(Input.isTouch ? 'TAP TO RESTART' : 'PRESS ENTER / CLICK TO RESTART', W / 2, 414, 13, 'rgba(255,255,255,' + pulse(4).toFixed(2) + ')', 'center', FONT_UI, '800');
 }
 function drawPaused() {
-  drawOverlayDim();
-  text('PAUSED', W / 2, 270, 34, CONFIG.colors.accent);
-  text(Input.isTouch ? 'TAP TO RESUME' : 'P / ESC / ENTER / CLICK TO RESUME', W / 2, 330, 14, CONFIG.colors.text);
-  if (!Input.isTouch) text('M MUTE', W / 2, 358, 13, '#bbbbbb');
+  var C = CONFIG.colors;
+  drawCard(232, Input.isTouch ? 136 : 160);
+  drawTextSprite(TextCache.get('PAUSED', 32, ['#fff6c2', '#ffc93a'], '#ff8a3d', '900', 'italic', 3), W / 2, 278);
+  text(Input.isTouch ? 'TAP TO RESUME' : 'P / ESC / ENTER / CLICK TO RESUME', W / 2, 330, 13, C.text, 'center', FONT_UI, '800');
+  if (!Input.isTouch) text('M  MUTE', W / 2, 356, 12, C.dim, 'center', FONT_UI, '700');
 }
 
 function render() {
+  if (!Sprites.ready) return;
   var ox = 0, oy = 0;
-  if (G.shake > 0 && !reducedMotion) { ox = rand(-3, 3); oy = rand(-3, 3); }
+  if (G.shake > 0 && !reducedMotion) { var m = CONFIG.fx.shakePx * (G.shake / 0.35); ox = rand(-m, m); oy = rand(-m, m); }
+  Sprites.exact = (ox === 0 && oy === 0 && Math.abs(Display.canvas.width / W - Sprites.scale) < 1e-6);
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  drawBackground();                       // unscaled, never shaken
   Display.applyTransform(ox, oy);
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = CONFIG.colors.bg;
-  ctx.fillRect(-10, -10, W + 20, H + 20);
-  drawStars();
   var st = G.state;
-  if (st === 'title') { drawTitle(); drawHud0(); return; }
-  drawEnemies(); drawBullets(); drawPlayer(); drawEffects(); drawHud(); drawBanner();
-  if (G.flash > 0 && !reducedMotion) { ctx.globalAlpha = G.flash / 0.18 * 0.35; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+  ctx.globalCompositeOperation = 'lighter';
+  drawStars();
+  if (st !== 'title') drawTrails();
+  ctx.globalCompositeOperation = 'source-over';
+  if (st === 'title') { drawTitle(); return; }
+  drawEnemies();
+  ctx.globalCompositeOperation = 'lighter'; drawBullets();
+  ctx.globalCompositeOperation = 'source-over';
+  drawPlayer();
+  ctx.globalCompositeOperation = 'lighter'; drawEffects();
+  ctx.globalCompositeOperation = 'source-over';
+  drawPopups(); drawHud(); drawBanner();
+  if (G.flash > 0 && !reducedMotion) {
+    ctx.globalAlpha = G.flash / 0.18 * 0.3; ctx.fillStyle = '#dfe8ff'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
+  }
   if (st === 'gameOver') drawGameOver();
   else if (st === 'paused') drawPaused();
 }
-function drawHud0() { /* title screen has no in-game HUD */ }
 
 /* =====================================================================
  * Loop - requestAnimationFrame with capped delta time
@@ -1121,8 +1527,10 @@ function frame(ts) {
   window.requestAnimationFrame(frame);
   if (document.hidden) { lastTs = 0; return; }
   if (!lastTs || G.skipDt) { lastTs = ts; G.skipDt = false; }
-  var dt = Math.min(CONFIG.maxDt, Math.max(0, (ts - lastTs) / 1000));
+  var raw = ts - lastTs;
+  var dt = Math.min(CONFIG.maxDt, Math.max(0, raw / 1000));
   lastTs = ts;
+  if (G.state === 'playing' || G.state === 'waveIntro') Quality.sample(raw);
   update(dt);
   render();
 }
@@ -1148,9 +1556,9 @@ function boot() {
 
   Input.onStart = handleStart; Input.onPause = togglePause; Input.onMute = toggleMute;
   initPools();
-  Display.onDprChange = function (dpr) { Sprites.build(dpr); };
+  Display.onScaleChange = function (S) { Sprites.build(S); };
   Display.init({ app: app, stage: stage, canvas: canvas, ctx: ctx });
-  if (!Sprites.ready) Sprites.build(Display.dpr);
+  if (!Sprites.ready) Sprites.build(Math.min(window.devicePixelRatio || 1, CONFIG.maxDpr));
 
   // Touch detection must run AFTER Display.init: switching to touch mode re-fits the canvas.
   var coarse = false;
@@ -1158,6 +1566,7 @@ function boot() {
   Input.onTouchMode = function () { app.classList.add('touch'); Display.fit(); };
   Input.isTouch = false;
   if (coarse) Input.markTouch();
+
   Input.init({
     app: app, stage: stage, btnPause: btnPause, btnMute: btnMute,
     left: document.getElementById('padLeft'), right: document.getElementById('padRight'), fire: document.getElementById('padFire')
